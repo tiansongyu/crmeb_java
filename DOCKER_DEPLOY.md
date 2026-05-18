@@ -31,25 +31,11 @@ docker compose up -d --build
 
 ## 启动移动端 H5
 
-当前 `app` 目录是 HBuilderX/uni-app 项目，仓库没有完整的 npm CLI 构建依赖。先用 HBuilderX 或现有发布流程生成：
-
-```text
-app/unpackage/dist/build/h5/index.html
-```
-
-再启动 H5 容器：
+`app-h5` 容器会在 Docker build 阶段自动执行 H5 构建并输出到 `unpackage/dist/build/h5`，然后再交给 Nginx 提供静态服务：
 
 ```bash
 ./depoly.sh --with-app-h5
 ```
-
-如果服务器安装了 HBuilderX CLI，也可以让部署脚本先构建 H5 再启动容器：
-
-```bash
-HBUILDERX_CLI=/path/to/HBuilderX/plugins/launcher/base/cli ./depoly.sh --with-app-h5
-```
-
-当前仓库的 `app/package.json` 没有完整的 uni-app CLI 构建依赖和 `build:h5` 脚本；如果不使用 HBuilderX，需要先补齐 npm 构建链路，并保证 `npm run build:h5` 输出到 `app/unpackage/dist/build/h5`。
 
 访问：`http://服务器IP:8082`
 
