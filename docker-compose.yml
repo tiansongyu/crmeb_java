@@ -14,7 +14,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-crmeb123}
       TZ: Asia/Shanghai
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "0.0.0.0:${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./crmeb/sql/Crmeb_v1.4.sql:/docker-entrypoint-initdb.d/01-crmeb.sql:ro
@@ -31,7 +31,7 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "0.0.0.0:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -68,7 +68,7 @@ services:
       JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
       TZ: Asia/Shanghai
     ports:
-      - "${ADMIN_API_PORT:-20400}:20400"
+      - "0.0.0.0:${ADMIN_API_PORT:-20400}:20400"
     volumes:
       - upload_data:/data/crmeb
 
@@ -100,7 +100,7 @@ services:
       JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
       TZ: Asia/Shanghai
     ports:
-      - "${FRONT_API_PORT:-20410}:20410"
+      - "0.0.0.0:${FRONT_API_PORT:-20410}:20410"
     volumes:
       - upload_data:/data/crmeb
 
@@ -113,7 +113,7 @@ services:
     depends_on:
       - crmeb-admin
     ports:
-      - "${ADMIN_WEB_PORT:-8080}:80"
+      - "0.0.0.0:${ADMIN_WEB_PORT:-8080}:80"
 
   app-h5:
     profiles: ["app-h5"]
@@ -125,7 +125,7 @@ services:
     depends_on:
       - crmeb-front
     ports:
-      - "${APP_H5_PORT:-8082}:80"
+      - "0.0.0.0:${APP_H5_PORT:-8082}:80"
 
 volumes:
   mysql_data:

@@ -18,9 +18,9 @@ cp .env.example .env
 
 访问：
 
-- PC 管理端：`http://localhost:8080`
-- 管理端 API：`http://localhost:20400`
-- 移动端 API：`http://localhost:20410`
+- PC 管理端：`http://服务器IP:8080`
+- 管理端 API：`http://服务器IP:20400`
+- 移动端 API：`http://服务器IP:20410`
 
 首次启动 MySQL 会导入初始化 SQL。若已经存在 `mysql_data` 卷，SQL 不会重复导入；需要重建库时先执行：
 
@@ -43,7 +43,15 @@ app/unpackage/dist/build/h5/index.html
 ./depoly.sh --with-app-h5
 ```
 
-访问：`http://localhost:8082`
+如果服务器安装了 HBuilderX CLI，也可以让部署脚本先构建 H5 再启动容器：
+
+```bash
+HBUILDERX_CLI=/path/to/HBuilderX/plugins/launcher/base/cli ./depoly.sh --with-app-h5
+```
+
+当前仓库的 `app/package.json` 没有完整的 uni-app CLI 构建依赖和 `build:h5` 脚本；如果不使用 HBuilderX，需要先补齐 npm 构建链路，并保证 `npm run build:h5` 输出到 `app/unpackage/dist/build/h5`。
+
+访问：`http://服务器IP:8082`
 
 ## 配置
 

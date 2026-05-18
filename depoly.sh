@@ -10,6 +10,7 @@ mkdir -p "$DOCKER_CONFIG"
 COMPOSE=(docker compose)
 BASE_SERVICES=(mysql redis crmeb-admin crmeb-front admin-web)
 APP_H5_ARTIFACT="app/unpackage/dist/build/h5/index.html"
+APP_H5_OUTPUT_DIR="app/unpackage/dist/build/h5"
 
 usage() {
   cat <<'USAGE'
@@ -89,14 +90,56 @@ env_file_value() {
   printf '%s' "${value:-$default}"
 }
 
+build_app_h5_artifact() {
+  if [[ -f "$APP_H5_ARTIFACT" ]]; then
+    return 0
+  fi
+
+  if grep -q '"build:h5"' app/package.json 2>/dev/null; then
+    echo "Building uni-app H5 artifact with npm run build:h5..."
+    (
+      cd app
+      if [[ -f package-lock.json ]]; then
+        npm ci
+      else
+        npm install
+      fi
+      npm run build:h5
+    )
+  elif [[ -n "${HBUILDERX_CLI:-}" && -x "${HBUILDERX_CLI}" ]]; then
+    echo "Building uni-app H5 artifact with HBuilderX CLI..."
+    "${HBUILDERX_CLI}" publish --platform h5 --project "$ROOT_DIR/app"
+  fi
+
+  if [[ ! -f "$APP_H5_ARTIFACT" ]]; then
+    cat >&2 <<EOF
+Missing $APP_H5_ARTIFACT.
+
+The app project in this repository does not include a CLI H5 build toolchain.
+Build the uni-app H5 artifact first, then rerun:
+
+  ./depoly.sh --with-app-h5
+
+Supported ways:
+  1. HBuilderX: open app/ and publish H5.
+  2. HBuilderX CLI:
+     HBUILDERX_CLI=/path/to/HBuilderX/plugins/launcher/base/cli ./depoly.sh --with-app-h5
+  3. Add an app/package.json build:h5 script that writes to $APP_H5_OUTPUT_DIR.
+
+Use ./depoly.sh --no-app-h5 to deploy only MySQL, Redis, Java APIs, and admin-web.
+EOF
+    exit 1
+  fi
+}
+
 SERVICES=("${BASE_SERVICES[@]}")
 PROFILE_ARGS=()
 if [[ "$WITH_APP_H5" == "1" || ( "$WITH_APP_H5" == "auto" && -f "$APP_H5_ARTIFACT" ) ]]; then
+  if [[ "$WITH_APP_H5" == "1" ]]; then
+    build_app_h5_artifact
+  fi
   PROFILE_ARGS=(--profile app-h5)
   SERVICES+=(app-h5)
-elif [[ "$WITH_APP_H5" == "1" && ! -f "$APP_H5_ARTIFACT" ]]; then
-  echo "Missing $APP_H5_ARTIFACT. Build uni-app H5 first or run with --no-app-h5." >&2
-  exit 1
 fi
 
 echo "Validating docker compose configuration..."
@@ -180,11 +223,11 @@ echo "Starting services: ${SERVICES[*]}"
 
 echo
 echo "Deployment finished."
-echo "Admin web:     http://localhost:${ADMIN_WEB_PORT:-8080}"
-echo "Admin API:     http://localhost:${ADMIN_API_PORT:-20400}"
-echo "Front API:     http://localhost:${FRONT_API_PORT:-20410}"
+echo "Admin web:     http://0.0.0.0:${ADMIN_WEB_PORT:-8080}"
+echo "Admin API:     http://0.0.0.0:${ADMIN_API_PORT:-20400}"
+echo "Front API:     http://0.0.0.0:${FRONT_API_PORT:-20410}"
 if [[ " ${SERVICES[*]} " == *" app-h5 "* ]]; then
-  echo "App H5:        http://localhost:${APP_H5_PORT:-8082}"
+  echo "App H5:        http://0.0.0.0:${APP_H5_PORT:-8082}"
 else
   echo "App H5:        skipped. Generate $APP_H5_ARTIFACT or run ./depoly.sh --with-app-h5"
 fi
