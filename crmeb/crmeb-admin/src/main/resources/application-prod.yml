@@ -1,13 +1,13 @@
 # CRMEB 相关配置
 crmeb:
   version: CRMEB-JAVA-KY-v1.4 # 当前代码版本
-  domain: #配合swagger使用 # 待部署域名
+  domain: ${CRMEB_DOMAIN:} #配合swagger使用 # 待部署域名
   wechat-api-url:  #请求微信接口中专服务器
   wechat-js-api-debug: false #微信js api系列是否开启调试模式
   wechat-js-api-beta: true #微信js api是否是beta版本
   asyncConfig: true #是否同步config表数据到redis
   asyncWeChatProgramTempList: false #是否同步小程序公共模板库
-  imagePath: /JAVA_PROJECT/SINGLE/demo/admin/ # 服务器图片路径配置 斜杠结尾
+  imagePath: ${CRMEB_IMAGE_PATH:/data/crmeb/admin/} # 服务器图片路径配置 斜杠结尾
   captchaOn: false # 是否开启行为验证码
   demoSite: true # 是否演示站点 所有手机号码都会掩码
 
@@ -26,13 +26,13 @@ spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: com.mysql.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/java_demo?characterEncoding=utf-8&useSSL=false&serverTimeZone=GMT+8
-    username: java_demo
-    password: 111111
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://mysql:3306/crmeb?characterEncoding=utf-8&useSSL=false&serverTimeZone=GMT+8}
+    username: ${SPRING_DATASOURCE_USERNAME:crmeb}
+    password: ${SPRING_DATASOURCE_PASSWORD:crmeb123}
   redis:
-    host: 127.0.0.1 #地址
-    port: 6379 #端口
-    password: 111111
+    host: ${SPRING_REDIS_HOST:redis} #地址
+    port: ${SPRING_REDIS_PORT:6379} #端口
+    password: ${SPRING_REDIS_PASSWORD:}
     timeout: 10000 # 连接超时时间（毫秒）
     database: 4 #默认数据库
     jedis:

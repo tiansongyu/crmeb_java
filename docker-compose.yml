@@ -1,0 +1,133 @@
+services:
+  mysql:
+    image: mysql:5.7
+    container_name: crmeb-mysql
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+      - --max_allowed_packet=256M
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123456}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-crmeb}
+      MYSQL_USER: ${MYSQL_USER:-crmeb}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-crmeb123}
+      TZ: Asia/Shanghai
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./crmeb/sql/Crmeb_v1.4.sql:/docker-entrypoint-initdb.d/01-crmeb.sql:ro
+      - ./docker/mysql/02-quartz-case.sql:/docker-entrypoint-initdb.d/02-quartz-case.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root123456}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:6.2-alpine
+    container_name: crmeb-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  crmeb-admin:
+    build:
+      context: ./crmeb
+      dockerfile: Dockerfile
+      args:
+        MODULE: crmeb-admin
+        JAR_NAME: Crmeb-admin.jar
+    container_name: crmeb-admin
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES: "true"
+      SPRING_MAIN_LAZY_INITIALIZATION: "true"
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-crmeb}?characterEncoding=utf-8&useSSL=false&serverTimeZone=GMT+8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-crmeb}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-crmeb123}
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: ""
+      CRMEB_IMAGE_PATH: /data/crmeb/admin/
+      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
+      TZ: Asia/Shanghai
+    ports:
+      - "${ADMIN_API_PORT:-20400}:20400"
+    volumes:
+      - upload_data:/data/crmeb
+
+  crmeb-front:
+    build:
+      context: ./crmeb
+      dockerfile: Dockerfile
+      args:
+        MODULE: crmeb-front
+        JAR_NAME: Crmeb-front.jar
+    container_name: crmeb-front
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES: "true"
+      SPRING_MAIN_LAZY_INITIALIZATION: "true"
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-crmeb}?characterEncoding=utf-8&useSSL=false&serverTimeZone=GMT+8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-crmeb}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-crmeb123}
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: ""
+      CRMEB_IMAGE_PATH: /data/crmeb/front/
+      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
+      TZ: Asia/Shanghai
+    ports:
+      - "${FRONT_API_PORT:-20410}:20410"
+    volumes:
+      - upload_data:/data/crmeb
+
+  admin-web:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    container_name: crmeb-admin-web
+    restart: unless-stopped
+    depends_on:
+      - crmeb-admin
+    ports:
+      - "${ADMIN_WEB_PORT:-8080}:80"
+
+  app-h5:
+    profiles: ["app-h5"]
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: crmeb-app-h5
+    restart: unless-stopped
+    depends_on:
+      - crmeb-front
+    ports:
+      - "${APP_H5_PORT:-8082}:80"
+
+volumes:
+  mysql_data:
+  redis_data:
+  upload_data:

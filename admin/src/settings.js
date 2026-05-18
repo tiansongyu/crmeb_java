@@ -9,7 +9,8 @@
 // +----------------------------------------------------------------------
 
 // 请求接口地址 如果没有配置自动获取当前网址路径
-const VUE_APP_API_URL = process.env.VUE_APP_BASE_API || `${location.origin}/api/`;
+const VUE_APP_API_URL =
+  process.env.VUE_APP_BASE_API || (typeof location !== 'undefined' ? `${location.origin}/api/` : '/api/');
 module.exports = {
   // 接口请求地址
   apiBaseURL: VUE_APP_API_URL,

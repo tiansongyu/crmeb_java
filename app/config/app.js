@@ -8,8 +8,9 @@
 // | Author: CRMEB Team <admin@crmeb.com>
 // +----------------------------------------------------------------------
 //移动端商城API
-let domain = 'http://192.168.31.35:2511'
-// let domain = 'https://apif.java.crmeb.net'
+let runtimeOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+let domain = process.env.VUE_APP_BASE_API || runtimeOrigin || 'http://localhost:8081'
+let h5Url = process.env.VUE_APP_H5_URL || runtimeOrigin || 'http://localhost:8082'
 
 module.exports = {
 	// 请求域名 格式： https://您的域名
@@ -17,7 +18,7 @@ module.exports = {
 		// HTTP_REQUEST_URL:'',
 		HTTP_REQUEST_URL: domain,
 		// H5商城地址
-		HTTP_H5_URL: 'http://java.crmeb.net',
+		HTTP_H5_URL: h5Url,
 	// #endif
 	// #ifdef H5
 		HTTP_REQUEST_URL:domain,
