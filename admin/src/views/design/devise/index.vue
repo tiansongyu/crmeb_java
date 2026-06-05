@@ -16,10 +16,7 @@
         <div v-if="listActive === 0" class="rightModel acea-row">
           <div class="leftModel">
             <div class="current_home">
-              <div class="model_header">
-                <iframe id="iframe" class="iframe-box" :src="frontDomain" frameborder="0" ref="iframe"></iframe>
-              </div>
-              <div class="mask"></div>
+              <home-preview />
             </div>
           </div>
           <div style="width: 100%">
@@ -183,13 +180,7 @@
       destroy-on-close
       :close-on-click-modal="false"
     >
-      <iframe
-        v-if="perViewDia.visible"
-        id="ifPerviewShop"
-        :src="perViewDia.perViewUrl"
-        style="width: 390px; height: 650px"
-        frameborder="0"
-      />
+      <home-preview v-if="perViewDia.visible" :page-id="perViewDia.pageId" />
     </el-dialog>
   </div>
 </template>
@@ -214,8 +205,10 @@ import {
 import QRcode from 'qrcodejs2';
 import { checkPermi } from '@/utils/permission';
 import { handleDeleteTable } from '@/libs/public'; // 权限判断函数
+import HomePreview from '@/views/design/components/homePreview';
 export default {
   name: 'index',
+  components: { HomePreview },
   data() {
     return {
       grid: {
@@ -247,9 +240,9 @@ export default {
       },
       frontDomain: '',
       perViewDia: {
-        // 列表二维码预览
+        // 列表模板预览
         visible: false,
-        perViewUrl: '',
+        pageId: 0,
       },
       Qrcode: '', //小程序二维码
     };
@@ -290,7 +283,7 @@ export default {
     //预览
     previewProtol(id) {
       if (!id) return;
-      this.perViewDia.perViewUrl = this.frontDomain + '?id=' + id;
+      this.perViewDia.pageId = id;
       this.perViewDia.visible = true;
     },
     // 使用模板
@@ -354,15 +347,6 @@ export default {
 <style scoped lang="scss">
 .current_home {
   position: relative;
-}
-
-.mask {
-  position: absolute;
-  left: 0;
-  width: 100%;
-  top: 0;
-  height: 100%;
-  background-color: transparent;
 }
 
 .Qrcode-box {
@@ -450,16 +434,6 @@ export default {
   flex-wrap: nowrap !important;
 }
 
-.model_header {
-  width: 350px;
-}
-
-.iframe-box {
-  width: 350px;
-  height: 669px;
-  border-radius: 10px;
-  border: 1px solid #eee;
-}
 .list-btn {
   padding: 0 !important;
 }

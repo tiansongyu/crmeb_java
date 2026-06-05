@@ -110,7 +110,7 @@
 					borderRadius: this.dataConfig.bgStyle.val * 2 + 'rpx',
 					margin: this.dataConfig.mbConfig.val * 2 + 'rpx' + ' ' + this.dataConfig.lrConfig.val * 2 + 'rpx' +
 						' ' + 0,
-					padding: this.dataConfig.upConfig.val * 2 + 'rpx' + ' ' + '24rpx' + ' ' + this.dataConfig.downConfig
+					padding: this.dataConfig.upConfig.val * 2 + 'rpx' + ' ' + '20rpx' + ' ' + this.dataConfig.downConfig
 						.val * 2 + 'rpx'
 				}
 			},

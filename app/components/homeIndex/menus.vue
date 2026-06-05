@@ -170,7 +170,7 @@
 				let that = this;
 				const query = uni.createSelectorQuery().in(this);
 				query.select('#nav0').boundingClientRect(data => {
-					that.navHigh = data.height;
+					if (data) that.navHigh = data.height;
 				}).exec();
 			},
 			pageNum(num) {

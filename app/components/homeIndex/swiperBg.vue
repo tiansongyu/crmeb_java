@@ -74,7 +74,8 @@
 			//指示器样式
 			dotStyle() {
 				return {
-					padding: '0 50rpx',
+					paddingLeft: (this.dataConfig.lrConfig.val + 40) * 2 + 'rpx',
+					paddingRight: (this.dataConfig.lrConfig.val + 40) * 2 + 'rpx',
 					justifyContent: this.dataConfig.txtStyle.tabVal === 1 ? 'center' : this.dataConfig.txtStyle
 						.tabVal === 2 ? 'flex-end' : 'flex-start'
 				}
@@ -94,7 +95,7 @@
 					background: `linear-gradient(${this.dataConfig.bgColor.color[0].item}, ${this.dataConfig.bgColor.color[1].item})`,
 					margin: this.dataConfig.mbConfig.val * 2 + 'rpx' + ' ' + this.dataConfig.lrConfig.val * 2 + 'rpx' +
 						' ' + 0,
-					padding: this.dataConfig.upConfig.val * 2 + 'rpx' + ' ' + '20rpx' + ' ' + this.dataConfig.downConfig.val *
+					padding: this.dataConfig.upConfig.val * 2 + 'rpx' + ' ' + 0 + ' ' + this.dataConfig.downConfig.val *
 						2 + 'rpx'
 				}
 			},

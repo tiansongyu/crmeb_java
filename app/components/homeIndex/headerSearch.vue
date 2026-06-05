@@ -115,6 +115,7 @@
 					background: `linear-gradient(${this.dataConfig.bgColor.color[0].item}, ${this.dataConfig.bgColor.color[1].item})`,
 					margin: 0 + ' ' + this.dataConfig.lrConfig.val * 2 + 'rpx' +
 						' ' + 0,
+					padding: '24rpx 24rpx 24rpx',
 					// #ifdef MP
 					height:this.searchBoxHeight + 'px',
 					// #endif
@@ -151,6 +152,7 @@
 					// 获取小程序头部高度
 					let info = uni.createSelectorQuery().in(this).select(".serch-box");
 					info.boundingClientRect((data)=> {
+						if (!data) return;
 						this.marTop = this.isSmallPage ? data.height :data.height + this.statusBarHeight
 					}).exec()
 				}, 100)

@@ -100,7 +100,7 @@
 				let statusHeight = uni.getSystemInfoSync().statusBarHeight;
 				const query = uni.createSelectorQuery().in(this);
 				query.select('.navTabBox').boundingClientRect(data => {
-					that.navHeight = (data.height + statusHeight) * 2;
+					if (data) that.navHeight = (data.height + statusHeight) * 2;
 				}).exec();
 			}, 300)
 			that.$nextTick(function() {

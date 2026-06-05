@@ -393,7 +393,7 @@
 						margin-top: 4rpx;
 					}
 					.logo {
-						width: 154rpx;
+						width: 140rpx;
 						height: 32rpx;
 						object-fit: contain;
 					}
@@ -417,7 +417,7 @@
 						font-size: 26rpx;
 						margin-left: 16rpx;
 						color: #FFFFFF;
-						margin-top: 6rpx;
+						margin-top: 4rpx;
 					}
 					.num1{
 						margin-left: 12rpx;
@@ -447,7 +447,7 @@
 
 				.img {
 					width: 240rpx;
-					// height: 240rpx;
+					height: 240rpx;
 					// background: #F3F9FF;
 
 				}
@@ -491,7 +491,7 @@
 
 							.people {
 								color: #fff;
-								padding: 4rpx 16rpx;
+								padding: 4rpx 12rpx;
 								border-radius: 8rpx;
 							}
 
@@ -543,7 +543,7 @@
 
 						.numPink {
 							color: #ffffff;
-							padding: 6rpx 12rpx;
+							padding: 4rpx 12rpx;
 							border-radius: 4rpx;
 							font-size: 22rpx;
 						}
@@ -753,7 +753,7 @@
 	  position: absolute;
 	  left: 10rpx;
 	  top: 10rpx;
-	  border-radius: 32rpx;
+	  border-radius: 16rpx;
 	}
 	.avater-box{
 		position: relative;

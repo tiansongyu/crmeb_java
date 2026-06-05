@@ -86,6 +86,7 @@
 		pagediyInfoApi,
 		getCategoryTwo
 	} from '@/api/api.js';
+	import { normalizeDiyValue } from '@/utils/diyNormalize.js';
 	import {
 		mapGetters
 	} from "vuex";
@@ -219,6 +220,8 @@
 					let data = res.data;
 					this.bgInfo.isBgColor=data.isBgColor
 					this.bgInfo.colorPicker=data.colorPicker
+					// 兜底：旧版本保存的 DIY 模板可能缺少新版组件需要的字段
+					normalizeDiyValue(res.data.value);
 					that.styleConfig = that.$util.objToArr(res.data.value);
 					uni.hideLoading();
 					that.styleConfig.forEach((item) => {

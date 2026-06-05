@@ -158,6 +158,13 @@ Object.keys(filters).forEach((key) => {
 
 Vue.config.productionTip = false;
 
+// 全局错误兜底：个别页面/组件遇到历史脏数据等抛错时，
+// 记录日志而不是中断整棵组件树的渲染（避免装修预览等场景画面卡死/错乱）。
+Vue.config.errorHandler = function (err, vm, info) {
+  // eslint-disable-next-line no-console
+  console.error('[Vue error]', info, err);
+};
+
 const $previewApp = document.getElementById('previewApp');
 const childAttrs = {
   file: '',

@@ -126,7 +126,7 @@
 						@click="toGroupDetail(item.id)">
 						<view class="group-bottom-left">
 							<view class="img acea-row row-center row-middle four-img">
-								<easy-loadimage :image-src="item.image" width="214rpx" height="214rpx"
+								<easy-loadimage :image-src="item.image" width="240rpx" height="240rpx"
 									:radius="dataConfig.contentStyle.val"></easy-loadimage>
 							</view>
 						</view>

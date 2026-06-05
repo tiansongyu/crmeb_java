@@ -173,6 +173,7 @@
 		silenceBindingSpread,
 	} from '@/utils/index.js';
 	import animationType from '@/utils/animationType.js'
+	import { normalizeDiyValue } from '@/utils/diyNormalize.js';
 	import {
 		goProductDetail
 	} from "../../libs/order";
@@ -406,6 +407,9 @@
 						backgroundColor: res.data.titleBgColor.toString().toLowerCase(),
 					})
 					let data = res.data;
+					// 兜底：旧版本保存的 DIY 模板可能缺少新版组件需要的配置字段
+					// （themeStyleConfig 等），先做一次规范化以避免组件 computed 崩溃
+					normalizeDiyValue(res.data.value);
 					that.diyId = res.data.id;
 					that.isDefault = data.isDefault; //是否是首页，1是，0不是
 					that.styleConfig = that.$util.objToArr(res.data.value);
@@ -671,7 +675,7 @@
 			let query = uni.createSelectorQuery().in(this);
 			query.select("#home").boundingClientRect();
 			query.exec(res => {
-				this.domHeight = res[0].height;
+				if (res && res[0]) this.domHeight = res[0].height;
 			})
 		},
 		/**

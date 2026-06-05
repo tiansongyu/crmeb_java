@@ -327,7 +327,7 @@
 			//指示器样式
 			dotStyle() {
 				return {
-					padding: '0 40rpx',
+					padding: '0 44rpx',
 					justifyContent: this.dataConfig.txtStyle.tabVal === 1 ? 'center' : this.dataConfig.txtStyle
 						.tabVal === 2 ? 'flex-end' : 'flex-start'
 				}
@@ -399,6 +399,7 @@
 				} else {
 					//展示分类
 					query.select('.navTabBox').boundingClientRect(data => {
+						if (!data) return;
 						this.navHeight = data.height //元素navHeight的高度
 						// #ifdef H5
 						this.swiperTop = this.navHeight + this.marTop + this.statusBarHeight +

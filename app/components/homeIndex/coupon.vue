@@ -309,12 +309,12 @@
 				border-radius: 12rpx 12rpx 30rpx 30rpx;
 
 				.money {
-					width: 140rpx;
+					width: 144rpx;
 					height: 106rpx;
 					background: #ffffff;
 					border: 2rpx solid #fceae9;
 					position: absolute;
-					left: 9rpx;
+					left: 6rpx;
 					top: -16rpx;
 					text-align: center;
 					font-size: 40rpx;

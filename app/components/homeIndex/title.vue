@@ -60,10 +60,10 @@
 			},
 			titleStyle() {
 				return [{
-						'font-weight': this.dataConfig.textStyle.list[this.dataConfig.textStyle.tabVal].style,
+						'font-weight': this.dataConfig.textStyle.tabVal == 2 ? this.dataConfig.textStyle.list[this.dataConfig.textStyle.tabVal].style : '',
 					},
 					{
-						'font-style': this.dataConfig.textStyle.list[this.dataConfig.textStyle.tabVal].style
+						'font-style': this.dataConfig.textStyle.tabVal != 2 ? this.dataConfig.textStyle.list[this.dataConfig.textStyle.tabVal].style : ''
 					},
 					{
 						fontSize: 2*this.dataConfig.fontSize.val + 'rpx',
