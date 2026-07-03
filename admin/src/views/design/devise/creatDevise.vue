@@ -216,7 +216,12 @@
                                 <div class="iconfont icon-caozuo-fuzhi1" @click.stop="bindAddDom(item, 0, key)"></div>
                                 <div
                                   class="iconfont"
-                                  :class="item.isHide ? 'iconios-eye-off' : 'iconios-eye'"
+                                  :class="
+                                    $store.state.mobildConfig.defaultArray[item.num] &&
+                                    $store.state.mobildConfig.defaultArray[item.num].isHide
+                                      ? 'iconios-eye-off'
+                                      : 'iconios-eye'
+                                  "
                                   @click="bindHide(item, key)"
                                 ></div>
                               </div>
@@ -315,6 +320,7 @@ import vuedraggable from 'vuedraggable';
 import ClipboardJS from 'clipboard';
 import mPage from '../components/mobilePage/index.js';
 import mConfig from '../components/mobileConfig/index.js';
+import { deepMergeMissing } from '../utils/diyNormalize';
 import QRcode from 'qrcodejs2';
 import { mapGetters, mapState } from 'vuex';
 import { changeColorApi } from '@/api/systemConfig';
@@ -333,6 +339,7 @@ export default {
       lConfig: [], // 左侧组件
       mConfig: [], // 中间组件渲染
       rConfig: [], // 右侧组件配置
+      defaultConfigMap: {}, // defaultName -> 组件默认配置，用于加载旧模板时兜底补齐缺失字段
       activeConfigName: '',
       propsObj: {}, // 组件传递的数据,
       activeIndex: -100, // 选中的下标
@@ -449,6 +456,7 @@ export default {
   },
   created() {
     this.lConfig = this.objToArr(mPage);
+    this.buildDefaultConfigMap();
     this.getMobileTheme();
   },
   mounted() {
@@ -559,6 +567,22 @@ export default {
         this.defaultData(data.value);
       });
     },
+    // 以每个 mobilePage 组件的 data().defaultConfig 建立 defaultName -> 默认配置 映射，
+    // 加载旧模板时用于兜底补齐缺失字段，避免预览组件读取 undefined.tabVal 崩溃。
+    buildDefaultConfigMap() {
+      const map = {};
+      this.lConfig.forEach((comp) => {
+        try {
+          if (comp && comp.defaultName && typeof comp.data === 'function') {
+            const def = comp.data().defaultConfig;
+            if (def && typeof def === 'object') map[comp.defaultName] = def;
+          }
+        } catch (e) {
+          // 单个组件默认配置提取失败不影响整体加载
+        }
+      });
+      this.defaultConfigMap = map;
+    },
     //详情接口请求后，详情数据
     defaultData(data) {
       let obj = {};
@@ -569,6 +593,9 @@ export default {
       }
       newArr.sort(sortNumber);
       newArr.map((el, index) => {
+        // 兜底：旧模板缺少新版组件字段时，用组件默认配置补齐（仅补缺，不覆盖已有值）
+        const def = this.defaultConfigMap[el.name];
+        if (def) deepMergeMissing(el, def);
         if (el.name == 'home_footer') {
           this.isFooter = true;
         }
@@ -711,6 +738,8 @@ export default {
       this.mConfig = [];
       this.rConfig = [];
       this.activeIndex = -99;
+      // 清空已加载/已添加的组件配置，避免重置后残留组件被再次保存
+      this.$store.commit('mobildConfig/SETEMPTY');
       this.getInfo();
       this.isSearch = false;
       this.isFooter = false;
@@ -806,13 +835,19 @@ export default {
     //中间页点击添加模块；
     bindAddDom(item, type, index) {
       if (item.name === 'home_footer') return this.$message.warning('该组件只能添加一次');
+      // 复制(type===0)时先记录源组件的已编辑配置，避免复制成默认空配置丢失用户数据
+      let srcConfig = null;
+      if (type === 0) {
+        const live = this.$store.state.mobildConfig.defaultArray[item.num];
+        if (live) srcConfig = JSON.parse(JSON.stringify(live));
+      }
       let i = item;
       this.lConfig.forEach((j) => {
         if (item.name == j.name) {
           i = j;
         }
       });
-      this.addDomCon(i, type, index);
+      this.addDomCon(i, type, index, srcConfig);
     },
     //数组元素互换位置
     swapArray(arr, index1, index2) {
@@ -890,7 +925,7 @@ export default {
       this.rConfig[0] = JSON.parse(JSON.stringify(obj));
     },
     // 组件添加
-    addDomCon(item, type, index) {
+    addDomCon(item, type, index, srcConfig) {
       let val = this.$store.state.mobildConfig.defaultArray;
       if (item.name === 'home_footer') {
         if (this.isFooter) return this.$message.warning('该组件只能添加一次');
@@ -962,7 +997,21 @@ export default {
       });
       this.$store.commit('mobildConfig/SETCONFIGNAME', item.name);
       this.$store.commit('mobildConfig/defaultArraySort', obj);
-      if (type === 0) return this.$message.success('复制成功');
+      if (type === 0) {
+        // 复制：用源组件的已编辑配置覆盖新组件的默认空配置（保留新的 num/timestamp/id）
+        if (srcConfig) {
+          const newItem = this.mConfig[index + 1];
+          if (newItem && newItem.num != null) {
+            const newNum = newItem.num;
+            const merged = JSON.parse(JSON.stringify(srcConfig));
+            merged.timestamp = Number(newNum);
+            merged.id = 'id' + newNum;
+            merged.isHide = false;
+            this.$store.commit('mobildConfig/ADDARRAY', { num: newNum, val: merged });
+          }
+        }
+        return this.$message.success('复制成功');
+      }
     },
     //移动事件
     onMove(e) {

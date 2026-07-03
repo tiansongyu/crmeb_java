@@ -2,7 +2,9 @@
   <div class="news-box" :style="boxStyle" v-if="configObj">
     <div class="item" :style="textColor">
       <div class="img-box"><img :src="imgUrl" alt="" /></div>
-      <div class="right-box" :style="textPosition">{{ list[0].chiild[0].val }}</div>
+      <div class="right-box" :style="textPosition" v-if="list.length && list[0].chiild && list[0].chiild.length">
+        {{ list[0].chiild[0].val }}
+      </div>
     </div>
   </div>
 </template>

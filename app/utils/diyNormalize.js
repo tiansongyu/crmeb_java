@@ -35,7 +35,7 @@ const patches = {
     themeStyleConfig: themeStyleConfigDefault,
     docColor: colorDefault('#E93323', '指示器颜色', 'docColor'),
   },
-  homeBargain: {
+  bargain: {
     themeStyleConfig: themeStyleConfigDefault,
     priceColor: colorDefault('#E93323', '砍价价格颜色', 'priceColor'),
     groupTitleColor: colorDefault('#E93323', '标签颜色', 'groupTitleColor'),
@@ -47,7 +47,7 @@ const patches = {
       color: [{ item: '#FF7931' }, { item: '#E93323' }],
     },
   },
-  homeGroup: {
+  group: {
     themeStyleConfig: themeStyleConfigDefault,
     priceColor: colorDefault('#E93323', '拼团价格颜色', 'priceColor'),
     groupTitleColor: colorDefault('#E93323', '标签颜色', 'groupTitleColor'),
@@ -59,7 +59,7 @@ const patches = {
       color: [{ item: '#FF7931' }, { item: '#E93323' }],
     },
   },
-  homeCoupon: {
+  homeCoupons: {
     themeStyleConfig: themeStyleConfigDefault,
     priceColor: colorDefault('#E93323', '价格颜色', 'priceColor'),
     itemBgColor: colorDefault('#FFFFFF', '卡片背景色', 'itemBgColor'),
@@ -71,7 +71,7 @@ const patches = {
       color: [{ item: '#FF7931' }, { item: '#E93323' }],
     },
   },
-  homeSeckill: {
+  seckill: {
     themeStyleConfig: themeStyleConfigDefault,
     priceColor: colorDefault('#E93323', '价格颜色', 'priceColor'),
   },

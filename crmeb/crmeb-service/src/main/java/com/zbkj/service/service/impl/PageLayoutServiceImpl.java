@@ -165,10 +165,11 @@ public class PageLayoutServiceImpl implements PageLayoutService {
      */
     @Override
     public Boolean indexNewsSave(JSONObject jsonObject) {
-        List<JSONObject> indexNews = CrmebUtil.jsonArrayToJsonObjectList(jsonObject.getJSONArray("indexNews"));
+        // 兼容 indexNews 缺省/为空：避免对 null 的 JSONArray 调 size() 抛 NPE，此时按清空处理
+        List<JSONObject> indexNews = StrUtil.isNotBlank(jsonObject.getString("indexNews"))
+                ? CrmebUtil.jsonArrayToJsonObjectList(jsonObject.getJSONArray("indexNews"))
+                : CollUtil.newArrayList();
         List<SystemGroupData> dataList = convertGroupData(indexNews, Constants.GROUP_DATA_ID_INDEX_NEWS_BANNER);
-        if (StrUtil.isNotBlank(jsonObject.getString("indexNews"))) {
-        }
         Boolean execute = transactionTemplate.execute(e -> {
             // 先删除历史数据
             systemGroupDataService.deleteByGid(Constants.GROUP_DATA_ID_INDEX_NEWS_BANNER);
@@ -328,6 +329,10 @@ public class PageLayoutServiceImpl implements PageLayoutService {
         String isCustom = jsonObject.getString("isCustom");
         if (StrUtil.isBlank(isCustom)) {
             throw new CrmebException("请选择是否自定义");
+        }
+        // 先校验字段存在，避免对 null 的 JSONArray 调 size() 抛 NPE
+        if (StrUtil.isBlank(jsonObject.getString("bottomNavigationList"))) {
+            throw new CrmebException("请传入底部导航数据");
         }
         List<JSONObject> bottomNavigationList = CrmebUtil.jsonArrayToJsonObjectList(jsonObject.getJSONArray("bottomNavigationList"));
         if (CollUtil.isEmpty(bottomNavigationList)) {

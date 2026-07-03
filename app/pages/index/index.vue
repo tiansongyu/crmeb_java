@@ -423,11 +423,10 @@
 					};
 					uni.hideLoading();
 					if (type) {
-						that.styleConfig.forEach((item) => {
-							if (item.name == 'headerSerch' || item.name == 'homeComb' || item.name ==
-								'tabNav') {
-								that.styleConfig.splice(index, 1);
-							}
+						// 微页面：过滤掉顶部/组合/分类导航组件（这些只在首页展示）
+						that.styleConfig = that.styleConfig.filter((item) => {
+							return !(item.name == 'headerSerch' || item.name == 'homeComb' || item.name ==
+								'tabNav');
 						});
 					} else {
 						that.styleConfig.forEach((item) => {
@@ -481,7 +480,7 @@
 						getCategoryTwo(item.val).then(res => {
 							this.sortList = res.data;
 							// #ifdef H5
-							self.sortMarTop = 10;
+							this.sortMarTop = 10;
 							// #endif
 						});
 						this.categoryId = item.val;

@@ -155,7 +155,7 @@ export default {
   },
   methods: {
     //状态切换
-    onchangeIsShow(e) {
+    onchangeIsShow(e, index) {
       this.configData.list[index].status = e;
     },
     linkUrl(e) {
