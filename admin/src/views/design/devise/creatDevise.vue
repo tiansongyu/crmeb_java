@@ -999,16 +999,20 @@ export default {
       this.$store.commit('mobildConfig/defaultArraySort', obj);
       if (type === 0) {
         // 复制：用源组件的已编辑配置覆盖新组件的默认空配置（保留新的 num/timestamp/id）
-        if (srcConfig) {
-          const newItem = this.mConfig[index + 1];
-          if (newItem && newItem.num != null) {
-            const newNum = newItem.num;
-            const merged = JSON.parse(JSON.stringify(srcConfig));
-            merged.timestamp = Number(newNum);
-            merged.id = 'id' + newNum;
-            merged.isHide = false;
-            this.$store.commit('mobildConfig/ADDARRAY', { num: newNum, val: merged });
-          }
+        const newItem = this.mConfig[index + 1];
+        if (srcConfig && newItem && newItem.num != null) {
+          const newNum = newItem.num;
+          const merged = JSON.parse(JSON.stringify(srcConfig));
+          merged.timestamp = Number(newNum);
+          merged.id = 'id' + newNum;
+          merged.isHide = false;
+          this.$store.commit('mobildConfig/ADDARRAY', { num: newNum, val: merged });
+        }
+        // 选中新复制的组件并刷新右侧配置面板，避免其仍绑定源组件被重排后失效的 num（否则报 JSON.parse(undefined)）
+        if (newItem) {
+          this.activeIndex = index + 1;
+          this.rConfig = [JSON.parse(JSON.stringify(newItem))];
+          this.$store.commit('mobildConfig/SETCONFIGNAME', newItem.name);
         }
         return this.$message.success('复制成功');
       }

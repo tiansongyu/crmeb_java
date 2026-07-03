@@ -2,7 +2,7 @@
   <!--颜色组件-->
   <div
     class="borderPadding"
-    v-if="(configData.isShow && configData.isShow == 1) || (!configData.isShow && configData.isShow != 0)"
+    v-if="configData && ((configData.isShow && configData.isShow == 1) || (!configData.isShow && configData.isShow != 0))"
   >
     <div class="acea-row row-middle mb20" v-if="configData">
       <div class="c_label labelwidth">{{ configData.title }}</div>
