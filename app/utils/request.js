@@ -15,6 +15,9 @@ import {
 	HEADERPARAMS
 } from '@/config/app';
 import {
+	normalizeImageTree
+} from '@/utils/imageUrl.js';
+import {
 	toLogin,
 	checkLogin
 } from '../libs/login';
@@ -49,6 +52,7 @@ function baseRequest(url, method, data, {
 			header: header,
 			data: data || {},
 			success: (res) => {
+				normalizeImageTree(res.data);
 				if (noVerify)
 					reslove(res.data, res);
 				else if (res.data.code == 200)

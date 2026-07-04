@@ -71,6 +71,10 @@
 		getSeckillIndexApi
 	} from '@/api/activity.js';
 	import easyLoadimage from '@/components/base/easy-loadimage.vue';
+	import {
+		getImageHost,
+		normalizeImageUrl
+	} from '@/utils/imageUrl.js';
 	export default {
 		name: 'homeSeckill',
 		props: {
@@ -84,7 +88,7 @@
 		},
 		data() {
 			return {
-				urlDomain: this.$Cache.get("imgHost"),
+				urlDomain: getImageHost(this.$Cache.get("imgHost")),
 				spikeList: [], // 秒杀
 				datatime: 0,
 				status: 0,
@@ -101,7 +105,7 @@
 				return {
 					borderRadius: this.dataConfig.bgStyle.val * 2 + 'rpx' + ' ' + this.dataConfig.bgStyle.val * 2 + 'rpx' +
 						' ' + 0 + ' ' + 0,
-					backgroundImage: `url(${this.urlDomain}crmebimage/presets/seckill_bg_pic.png),linear-gradient(${this.dataConfig.bgColor.color[0].item}, ${this.dataConfig.bgColor.color[1].item})`
+					backgroundImage: `url(${normalizeImageUrl(this.urlDomain + 'crmebimage/presets/seckill_bg_pic.png')}),linear-gradient(${this.dataConfig.bgColor.color[0].item}, ${this.dataConfig.bgColor.color[1].item})`
 				}
 			},
 			//最外层盒子的样式

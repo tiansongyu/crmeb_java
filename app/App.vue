@@ -5,6 +5,9 @@
 	import {
 		HTTP_REQUEST_URL
 	} from './config/app';
+	import {
+		getImageHost
+	} from './utils/imageUrl.js';
 	import Auth from './libs/wechat.js';
 	import Routine from './libs/routine.js';
 	import Apps from './libs/apps.js';
@@ -21,6 +24,8 @@
 		spread
 	} from "@/api/user";
 	var statusBarHeight = uni.getSystemInfoSync().statusBarHeight; //手机端头部手机时间位置高度
+	const defaultImageHost = getImageHost(Cache.get('imgHost'));
+	Cache.set('imgHost', defaultImageHost);
 	// const app = getApp();
 	export default {
 		globalData: {
@@ -40,7 +45,7 @@
 			routinePhoneVerification: '', //小程序手机号校验类型（多选）1微信小程序验证 2短信验证
 			companyName: uni.getStorageSync('companyName') ? uni.getStorageSync('companyName') : '欢迎你', //公司名称
 			tokenIsExist: false, //登录是否失效 false 失效，true没失效
-			mobileLoginLogo: uni.getStorageSync('mobileLoginLogo') || `${Cache.get("imgHost")}crmebimage/perset/staticImg/logo2.png` //登录页logo
+			mobileLoginLogo: uni.getStorageSync('mobileLoginLogo') || `${defaultImageHost}crmebimage/perset/staticImg/logo2.png` //登录页logo
 		},
 		onLaunch: function(option) {
 			//获取登录配置

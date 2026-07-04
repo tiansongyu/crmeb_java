@@ -11,6 +11,7 @@
 let runtimeOrigin = typeof window !== 'undefined' ? window.location.origin : ''
 let domain = process.env.VUE_APP_BASE_API || runtimeOrigin || 'http://localhost:8081'
 let h5Url = process.env.VUE_APP_H5_URL || runtimeOrigin || 'http://localhost:8082'
+let imageDomain = process.env.VUE_APP_IMAGE_DOMAIN || ''
 
 module.exports = {
 	// 请求域名 格式： https://您的域名
@@ -29,6 +30,8 @@ module.exports = {
 	HEADERPARAMS:{
 		'content-type': 'application/x-www-form-urlencoded'
 	},
+	// 图片资源域名。Docker 演示环境可通过 VUE_APP_IMAGE_DOMAIN 指向可访问的图片 CDN。
+	IMAGE_DOMAIN: imageDomain,
 	// 回话密钥名称 请勿修改此配置
 	TOKENNAME: 'Authori-zation',
 	// 缓存时间 0 永久

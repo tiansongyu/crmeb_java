@@ -3,8 +3,9 @@
  */
 import Cache from '@/utils/cache'
 import Vue from 'vue'
+import { getImageHost } from '@/utils/imageUrl.js'
 const global = {
   //图片域名
-  urlDomain: Cache.get('imgHost')?Cache.get('imgHost'):''
+  urlDomain: getImageHost(Cache.get('imgHost'))
 }
 Vue.prototype.$GLOBAL = global

@@ -175,6 +175,10 @@
 	import animationType from '@/utils/animationType.js'
 	import { normalizeDiyValue } from '@/utils/diyNormalize.js';
 	import {
+		getImageHost,
+		normalizeImageTree
+	} from '@/utils/imageUrl.js';
+	import {
 		goProductDetail
 	} from "../../libs/order";
 
@@ -212,7 +216,7 @@
 		},
 		data() {
 			return {
-				urlDomain: this.$Cache.get("imgHost"),
+				urlDomain: getImageHost(this.$Cache.get("imgHost")),
 				isNoCommodity: false,
 				isScrolled: false, //是否开始滚动
 				categoryId: 0,
@@ -558,8 +562,10 @@
 			getIndexConfig: function() {
 				let that = this;
 				getIndexData().then(res => {
-					let imgHost = res.data.logoUrl.split('crmebimage')[0];
+					normalizeImageTree(res.data);
+					let imgHost = getImageHost(res.data.logoUrl);
 					that.imgHost = imgHost;
+					that.urlDomain = imgHost;
 					that.$Cache.set('imgHost', imgHost );
 					// #ifdef H5 || APP-PLUS
 					that.$store.commit("SET_CHATURL", res.data.yzfUrl);

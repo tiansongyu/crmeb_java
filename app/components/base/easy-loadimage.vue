@@ -1,6 +1,6 @@
 <template>
 	<view class="easy-loadimage" :style="[boxStyle]" :id="uid">
-		<image class="origin-img" :style="[imageRadius]" :src="imageSrc" mode="scaleToFill" v-if="loadImg&&!isLoadError"
+		<image class="origin-img" :style="[imageRadius]" :src="normalizedImageSrc" mode="scaleToFill" v-if="loadImg&&!isLoadError"
 			v-show="showImg" :class="{'no-transition':!openTransition,'show-transition':showTransition&&openTransition}"
 			@load="handleImgLoad" @error="handleImgError">
 		</image>
@@ -22,6 +22,10 @@
 	import {
 		throttle
 	} from '@/utils/validate.js'
+	import {
+		getImageHost,
+		normalizeImageUrl
+	} from '@/utils/imageUrl.js'
 
 	// 生成全局唯一id
 	function generateUUID() {
@@ -77,7 +81,7 @@
 		data() {
 			const that = this;
 			return {
-				urlDomain: this.$Cache.get("imgHost"),
+				urlDomain: getImageHost(this.$Cache.get("imgHost")),
 				uid: 'uid-' + generateUUID(),
 				loadImg: false,
 				showImg: false,
@@ -92,7 +96,7 @@
 					query.select('#' + id).boundingClientRect(data => {
 						if (!data) return;
 						if (data.top - that.viewHeight < 0) {
-							that.loadImg = !!that.imageSrc;
+							that.loadImg = !!that.normalizedImageSrc;
 							that.isLoadError = !that.loadImg;
 						}
 					}).exec()
@@ -113,6 +117,11 @@
 						'border-radius': this.radius * 2 + 'rpx'
 					}
 				}
+			},
+			normalizedImageSrc() {
+				return normalizeImageUrl(this.imageSrc, {
+					imageHost: this.urlDomain
+				})
 			}
 		},
 		methods: {
