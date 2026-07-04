@@ -65,7 +65,7 @@ services:
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
       SPRING_REDIS_PASSWORD: ""
-      CRMEB_IMAGE_PATH: /data/crmeb/admin/
+      CRMEB_IMAGE_PATH: /data/crmeb/
       JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
       TZ: Asia/Shanghai
     ports:
@@ -97,7 +97,7 @@ services:
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
       SPRING_REDIS_PASSWORD: ""
-      CRMEB_IMAGE_PATH: /data/crmeb/front/
+      CRMEB_IMAGE_PATH: /data/crmeb/
       JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
       TZ: Asia/Shanghai
     ports:

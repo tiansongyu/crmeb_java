@@ -69,7 +69,7 @@ function getImageHost(source, options) {
   const requestHost = hostWithSlash(HTTP_REQUEST_URL);
   if (requestHost && !isPrivateUrl(requestHost)) return requestHost;
 
-  return hostWithSlash(runtimeOrigin());
+  return hostWithSlash(runtimeOrigin()) || '/';
 }
 
 function normalizeCrmebImagePath(value) {

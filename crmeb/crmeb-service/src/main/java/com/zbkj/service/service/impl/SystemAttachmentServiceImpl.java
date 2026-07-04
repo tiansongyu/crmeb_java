@@ -23,7 +23,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.net.URI;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * SystemAttachmentServiceImpl 接口实现
@@ -40,6 +43,10 @@ import java.util.List;
 @Service
 public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao, SystemAttachment>
         implements SystemAttachmentService {
+
+    private static final Pattern CRMEB_MEDIA_REF = Pattern.compile("(https?://[^\"'(),\\s]+/)?(?:undefined)?/?crmebimage/[^\"'(),\\s]+");
+    private static final Pattern CRMEB_MEDIA_PATH = Pattern.compile("crmebimage/[^\"'(),\\s]+");
+    private static final Pattern PRIVATE_HOST = Pattern.compile("^(localhost|127\\.|10\\.|192\\.168\\.|172\\.(1[6-9]|2\\d|3[0-1])\\.).*");
 
     @Resource
     private SystemAttachmentDao dao;
@@ -86,14 +93,12 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
      */
     @Override
     public String prefixImage(String path) {
-        // 如果那些域名不需要加，则跳过
-        return path.replace(UploadConstants.UPLOAD_FILE_KEYWORD+"/", getCdnUrl() + "/"+ UploadConstants.UPLOAD_FILE_KEYWORD+"/");
+        return prefixCrmebMedia(path);
     }
 
     @Override
     public String prefixUploadf(String path) {
-        // 如果那些域名不需要加，则跳过
-        return path.replace("crmebimage/" + UploadConstants.UPLOAD_AFTER_FILE_KEYWORD+"/", getCdnUrl() + "/" +"crmebimage/" + UploadConstants.UPLOAD_AFTER_FILE_KEYWORD+"/");
+        return prefixCrmebMedia(path);
     }
 
     /**
@@ -112,6 +117,56 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
             return path.replace("crmebimage/downloadf/", cdnUrl + "/crmebimage/downloadf/");
         }
         return path.replace("crmebimage/file/", getCdnUrl() + "/crmebimage/file/");
+    }
+
+    private String prefixCrmebMedia(String data) {
+        if (StringUtils.isBlank(data)) {
+            return data;
+        }
+        Matcher matcher = CRMEB_MEDIA_REF.matcher(data);
+        StringBuffer buffer = new StringBuffer();
+        while (matcher.find()) {
+            String raw = matcher.group();
+            String path = extractCrmebMediaPath(raw);
+            String replacement = shouldKeepAbsoluteUrl(raw) ? raw : withPublicUploadPrefix(path);
+            matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(buffer);
+        return buffer.toString();
+    }
+
+    private String extractCrmebMediaPath(String raw) {
+        Matcher matcher = CRMEB_MEDIA_PATH.matcher(raw);
+        return matcher.find() ? matcher.group().replaceFirst("^/+", "") : raw;
+    }
+
+    private String withPublicUploadPrefix(String relativePath) {
+        String cdnUrl = publicUploadPrefix();
+        if (StringUtils.isBlank(cdnUrl)) {
+            return "/" + relativePath;
+        }
+        return StringUtils.removeEnd(cdnUrl, "/") + "/" + relativePath;
+    }
+
+    private String publicUploadPrefix() {
+        String cdnUrl = StringUtils.trimToEmpty(getCdnUrl());
+        if (StringUtils.isBlank(cdnUrl) || isPrivateUrl(cdnUrl)) {
+            return "";
+        }
+        return cdnUrl;
+    }
+
+    private boolean shouldKeepAbsoluteUrl(String raw) {
+        return (raw.startsWith("http://") || raw.startsWith("https://")) && !isPrivateUrl(raw);
+    }
+
+    private boolean isPrivateUrl(String value) {
+        try {
+            String host = URI.create(value).getHost();
+            return StringUtils.isNotBlank(host) && PRIVATE_HOST.matcher(host).matches();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
@@ -211,4 +266,3 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
         return remove(wrapper);
     }
 }
-

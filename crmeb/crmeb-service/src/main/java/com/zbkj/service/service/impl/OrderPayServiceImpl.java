@@ -756,7 +756,7 @@ public class OrderPayServiceImpl implements OrderPayService {
         }
 
         storeOrder.setOfflinePayStatus(OfflinePayConstants.STATUS_PENDING);
-        storeOrder.setOfflinePayVoucher(request.getVoucher());
+        storeOrder.setOfflinePayVoucher(normalizeCrmebMediaPath(request.getVoucher()));
         storeOrder.setOfflinePayTradeNo(request.getTradeNo());
         storeOrder.setOfflinePayRemark(request.getRemark());
         storeOrder.setOfflinePayRefuseReason("");
@@ -942,6 +942,18 @@ public class OrderPayServiceImpl implements OrderPayService {
         response.setOfflinePayQrcode(getConfigValue(OfflinePayConstants.CONFIG_OFFLINE_PAY_QRCODE));
         response.setOfflinePayName(getConfigValue(OfflinePayConstants.CONFIG_OFFLINE_PAY_NAME));
         response.setOfflinePayTips(getConfigValue(OfflinePayConstants.CONFIG_OFFLINE_PAY_TIPS));
+    }
+
+    private String normalizeCrmebMediaPath(String value) {
+        if (StrUtil.isBlank(value)) {
+            return value;
+        }
+        String trimmed = value.trim();
+        int index = trimmed.indexOf("crmebimage/");
+        if (index < 0) {
+            return trimmed;
+        }
+        return trimmed.substring(index);
     }
 
     private String getConfigValue(String key) {

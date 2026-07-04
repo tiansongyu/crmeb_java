@@ -173,6 +173,10 @@
 						<view>驳回原因：</view>
 						<view class='conter'>{{orderInfo.offlinePayRefuseReason || '-'}}</view>
 					</view>
+					<view class="offline-proof" v-if="orderInfo.payType === 'offline' && orderInfo.offlinePayVoucher">
+						<view class="offline-proof-title">付款截图：</view>
+						<image :src="orderInfo.offlinePayVoucher" mode="aspectFit" @tap="previewOfflineVoucher"></image>
+					</view>
 					<view class='item flex justify-between align-center' v-if="orderInfo.mark && orderInfo.mark.length <= 15">
 						<view>买家留言：</view>
 						<view class='conter' >{{orderInfo.mark}}</view>
@@ -507,6 +511,12 @@
 			pay_fail: function() {
 				this.pay_close = false;
 				this.pay_order_id = '';
+			},
+			previewOfflineVoucher() {
+				if (!this.orderInfo.offlinePayVoucher) return;
+				uni.previewImage({
+					urls: [this.orderInfo.offlinePayVoucher]
+				});
 			},
 			/**
 			 * 获取订单详细信息
@@ -920,6 +930,25 @@
 		border: 1rpx solid #666;
 		padding: 3rpx 15rpx;
 		margin-left: 24rpx;
+	}
+
+	.offline-proof {
+		margin-top: 24rpx;
+		font-size: 28rpx;
+		color: #282828;
+	}
+
+	.offline-proof-title {
+		margin-bottom: 16rpx;
+	}
+
+	.offline-proof image {
+		width: 240rpx;
+		height: 240rpx;
+		border: 1rpx solid #eee;
+		border-radius: 12rpx;
+		background: #fafafa;
+		display: block;
 	}
 
 	.order-details .wrapper .actualPay {

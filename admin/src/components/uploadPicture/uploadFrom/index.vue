@@ -16,7 +16,13 @@
         @click="handleClose"
         size="medium"
       ></el-button>
-      <upload-index v-if="visible" :isMore="isMore" :modelName="modelName" @getImage="getImage" />
+      <upload-index
+        v-if="visible"
+        :isMore="isMore"
+        :modelName="modelName"
+        :defaultName="defaultName"
+        @getImage="getImage"
+      />
     </el-dialog>
   </div>
 </template>
@@ -32,6 +38,7 @@ export default {
       callback: function () {},
       isMore: '',
       modelName: '',
+      defaultName: '',
       ISmodal: false,
       booleanVal: false,
     };

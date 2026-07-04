@@ -16,6 +16,9 @@ import store from '../store';
 import {
 	pathToBase64
 } from '@/plugin/image-tools/index.js';
+import {
+	normalizeImageTree
+} from '@/utils/imageUrl.js';
 import util from 'utils/util'
 // #ifdef APP-PLUS
 import permision from "./permission.js"
@@ -525,6 +528,7 @@ export default {
 				} else {
 					let data = res.data ? JSON.parse(res.data) : {};
 					if (data.code == 200) {
+						normalizeImageTree(data);
 						successCallback && successCallback(data)
 					} else {
 						errorCallback && errorCallback(data);
@@ -598,6 +602,7 @@ export default {
 						} else {
 							let data = res.data ? JSON.parse(res.data) : {};
 							if (data.code == 200) {
+								normalizeImageTree(data);
 								data.data.localPath = localPath;
 								successCallback && successCallback(data)
 							} else {

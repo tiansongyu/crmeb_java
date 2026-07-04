@@ -119,10 +119,35 @@ SELECT 'offline_pay_tips', '线下扫码转账付款提示', 79, '请扫码完�
 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM `eb_system_config` WHERE `name` = 'offline_pay_tips');
 
+-- 本地 Docker/反向代理部署不能把 localhost 或内网地址返回给浏览器，统一走 /crmebimage/ 代理。
+UPDATE `eb_system_config`
+SET `value` = ''
+WHERE `name` = 'localUploadUrl'
+  AND (
+    `value` LIKE 'http://localhost%'
+    OR `value` LIKE 'https://localhost%'
+    OR `value` LIKE 'http://127.%'
+    OR `value` LIKE 'https://127.%'
+    OR `value` LIKE 'http://10.%'
+    OR `value` LIKE 'https://10.%'
+    OR `value` LIKE 'http://192.168.%'
+    OR `value` LIKE 'https://192.168.%'
+    OR `value` REGEXP '^https?://172\\.(1[6-9]|2[0-9]|3[0-1])\\.'
+  );
+
+UPDATE `eb_store_order`
+SET `offline_pay_voucher` = CONCAT('crmebimage/', SUBSTRING_INDEX(`offline_pay_voucher`, 'crmebimage/', -1))
+WHERE `offline_pay_voucher` LIKE '%crmebimage/%';
+
+UPDATE `eb_system_config`
+SET `value` = CONCAT('crmebimage/', SUBSTRING_INDEX(`value`, 'crmebimage/', -1))
+WHERE `name` = 'offline_pay_qrcode'
+  AND `value` LIKE '%crmebimage/%';
+
 UPDATE `eb_system_form_temp`
 SET `name` = '线下支付',
     `info` = '支付设置-线下支付',
-    `content` = '{"formRef":"elForm","formModel":"formData","size":"medium","labelPosition":"right","labelWidth":150,"formRules":"rules","gutter":15,"disabled":false,"span":24,"formBtns":true,"fields":[{"__config__":{"label":"线下支付状态：","labelWidth":null,"showLabel":true,"tag":"el-radio-group","tagIcon":"radio","changeTag":true,"layout":"colFormItem","span":24,"optionType":"default","regList":[],"required":true,"border":false,"document":"https://element.eleme.cn/#/zh-CN/component/radio","formId":101,"renderKey":1590041613118,"defaultValue":"''1''","tips":false},"__slot__":{"options":[{"label":"开启","value":"''1''"},{"label":"关闭","value":"''0''"}]},"style":{},"size":"medium","disabled":false,"__vModel__":"offline_pay_status"},{"__config__":{"label":"收款码：","tag":"self-upload","tagIcon":"selfUpload","layout":"colFormItem","defaultValue":null,"showLabel":true,"labelWidth":null,"required":true,"span":24,"showTip":false,"buttonText":"点击上传","regList":[],"changeTag":true,"fileSize":2,"sizeUnit":"MB","document":"https://element.eleme.cn/#/zh-CN/component/upload","formId":102,"renderKey":1780000000102,"tips":false},"__slot__":{"list-type":true},"action":"https://jsonplaceholder.typicode.com/posts/","disabled":true,"accept":"","name":"file","auto-upload":true,"list-type":"picture-card","multiple":false,"__vModel__":"offline_pay_qrcode"},{"__config__":{"label":"收款名称：","labelWidth":null,"showLabel":true,"changeTag":true,"tag":"el-input","tagIcon":"input","required":false,"layout":"colFormItem","span":24,"document":"https://element.eleme.cn/#/zh-CN/component/input","regList":[],"formId":103,"renderKey":1780000000103,"tips":false},"__slot__":{"prepend":"","append":""},"placeholder":"请输入收款账户名称","style":{"width":"50%"},"clearable":true,"prefix-icon":"","suffix-icon":"","maxlength":null,"show-word-limit":false,"readonly":false,"disabled":false,"__vModel__":"offline_pay_name"},{"__config__":{"label":"付款提示：","labelWidth":null,"showLabel":true,"tag":"el-input","tagIcon":"textarea","required":false,"layout":"colFormItem","span":24,"regList":[],"changeTag":true,"document":"https://element.eleme.cn/#/zh-CN/component/input","formId":104,"renderKey":1780000000104,"tips":false},"type":"textarea","placeholder":"请输入付款提示","autosize":{"minRows":4,"maxRows":4},"style":{"width":"50%"},"maxlength":null,"show-word-limit":false,"readonly":false,"disabled":false,"__vModel__":"offline_pay_tips"}]}',
+    `content` = '{"formRef":"elForm","formModel":"formData","size":"medium","labelPosition":"right","labelWidth":150,"formRules":"rules","gutter":15,"disabled":false,"span":24,"formBtns":true,"fields":[{"__config__":{"label":"线下支付状态：","labelWidth":null,"showLabel":true,"tag":"el-radio-group","tagIcon":"radio","changeTag":true,"layout":"colFormItem","span":24,"optionType":"default","regList":[],"required":true,"border":false,"document":"https://element.eleme.cn/#/zh-CN/component/radio","formId":101,"renderKey":1590041613118,"defaultValue":"''1''","tips":false},"__slot__":{"options":[{"label":"开启","value":"''1''"},{"label":"关闭","value":"''0''"}]},"style":{},"size":"medium","disabled":false,"__vModel__":"offline_pay_status"},{"__config__":{"label":"收款码：","tag":"self-upload","tagIcon":"selfUpload","layout":"colFormItem","defaultValue":null,"showLabel":true,"labelWidth":null,"required":true,"span":24,"showTip":false,"buttonText":"点击上传","regList":[],"changeTag":true,"fileSize":2,"sizeUnit":"MB","document":"https://element.eleme.cn/#/zh-CN/component/upload","formId":102,"renderKey":1780000000102,"tips":false},"__slot__":{"list-type":true},"action":"https://jsonplaceholder.typicode.com/posts/","disabled":true,"accept":"","name":"file","auto-upload":true,"list-type":"picture-card","multiple":false,"modelName":"order","defaultName":"收款码","__vModel__":"offline_pay_qrcode"},{"__config__":{"label":"收款名称：","labelWidth":null,"showLabel":true,"changeTag":true,"tag":"el-input","tagIcon":"input","required":false,"layout":"colFormItem","span":24,"document":"https://element.eleme.cn/#/zh-CN/component/input","regList":[],"formId":103,"renderKey":1780000000103,"tips":false},"__slot__":{"prepend":"","append":""},"placeholder":"请输入收款账户名称","style":{"width":"50%"},"clearable":true,"prefix-icon":"","suffix-icon":"","maxlength":null,"show-word-limit":false,"readonly":false,"disabled":false,"__vModel__":"offline_pay_name"},{"__config__":{"label":"付款提示：","labelWidth":null,"showLabel":true,"tag":"el-input","tagIcon":"textarea","required":false,"layout":"colFormItem","span":24,"regList":[],"changeTag":true,"document":"https://element.eleme.cn/#/zh-CN/component/input","formId":104,"renderKey":1780000000104,"tips":false},"type":"textarea","placeholder":"请输入付款提示","autosize":{"minRows":4,"maxRows":4},"style":{"width":"50%"},"maxlength":null,"show-word-limit":false,"readonly":false,"disabled":false,"__vModel__":"offline_pay_tips"}]}',
     `update_time` = NOW()
 WHERE `id` = 79;
 

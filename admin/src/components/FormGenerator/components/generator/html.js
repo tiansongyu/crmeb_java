@@ -282,7 +282,9 @@ const tags = {
     const height = el.height ? `:height="${el.height}"` : '';
     const multiple = el.multiple ? 'multiple' : '';
     const branding = el.branding ? `:branding="${el.branding}"` : '';
-    return `<${tag} ${vModel} ${height} ${branding} ${multiple}></${tag}>`;
+    const modelName = el.modelName ? `modelName="${el.modelName}"` : '';
+    const defaultName = el.defaultName ? `defaultName="${el.defaultName}"` : '';
+    return `<${tag} ${vModel} ${height} ${branding} ${multiple} ${modelName} ${defaultName}></${tag}>`;
   },
   'ueditor-from': (el) => {
     const { tag, vModel } = attrBuilder(el);

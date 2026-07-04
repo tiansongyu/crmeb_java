@@ -1,7 +1,7 @@
 FROM node:14-bullseye AS build
 
 WORKDIR /workspace/app
-ARG VUE_APP_IMAGE_DOMAIN=https://apia.beta.crmeb.xbdzz.cn
+ARG VUE_APP_IMAGE_DOMAIN=
 ENV VUE_APP_IMAGE_DOMAIN=${VUE_APP_IMAGE_DOMAIN}
 COPY package*.json ./
 RUN npm install -g npm@8.19.4 \

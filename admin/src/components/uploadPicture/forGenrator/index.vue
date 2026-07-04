@@ -11,7 +11,7 @@
         @dragenter="handleDragEnter($event, item)"
         @dragend="handleDragEnd($event, item)"
       >
-        <img :src="item.sattDir" />
+        <img :src="mediaUrl(item.sattDir)" />
         <i class="el-icon-error btndel" @click="handleRemove(index)" />
       </div>
       <div class="upLoadPicBox" @click="modalPicTap('2')" v-show="imageList.length < 20">
@@ -21,19 +21,27 @@
       </div>
     </div>
     <div class="upLoadPicBox" @click="modalPicTap('1')" v-else>
-      <div v-if="image" class="pictrue"><img :src="image" /></div>
+      <div v-if="image" class="pictrue"><img :src="mediaUrl(image)" /></div>
       <div v-else class="upLoad">
         <i class="el-icon-camera cameraIconfont" />
       </div>
     </div>
     <el-dialog append-to-body :visible.sync="visible" width="896px" :before-close="handleClose" :modal="true">
-      <upload-index v-if="visible" :checkedMore="imageList" :isMore="isMore" @getImage="getImage" />
+      <upload-index
+        v-if="visible"
+        :checkedMore="imageList"
+        :isMore="isMore"
+        :modelName="modelName"
+        :defaultName="defaultName"
+        @getImage="getImage"
+      />
     </el-dialog>
   </div>
 </template>
 
 <script>
 import UploadIndex from '@/components/uploadPicture/index.vue';
+import { normalizeAttachmentMediaList, normalizeCrmebMediaUrl } from '@/utils/mediaUrl';
 export default {
   name: 'UploadFroms',
   components: { UploadIndex },
@@ -42,6 +50,14 @@ export default {
     multiple: {
       type: Boolean,
       default: false,
+    },
+    modelName: {
+      type: String,
+      default: '',
+    },
+    defaultName: {
+      type: String,
+      default: '',
     },
   },
   data() {
@@ -53,35 +69,55 @@ export default {
       imageList: [],
     };
   },
+  watch: {
+    value: {
+      handler() {
+        this.syncValue();
+      },
+      deep: true,
+    },
+  },
   beforeMount() {
-    if (this.multiple) {
-      // 接收 v-model 数据
-      if (this.value) {
-        this.imageList = JSON.parse(this.value);
-      }
-    } else {
-      // 接收 v-model 数据
-      if (this.value) {
-        this.image = this.value;
-      }
-    }
+    this.syncValue();
     // 处理多选
     this.isMore = this.multiple ? '2' : '1';
   },
   methods: {
+    syncValue() {
+      if (this.multiple) {
+        // 接收 v-model 数据
+        if (this.value) {
+          this.imageList = normalizeAttachmentMediaList(
+            typeof this.value === 'string' ? JSON.parse(this.value) : this.value,
+          );
+        } else {
+          this.imageList = [];
+        }
+      } else {
+        // 接收 v-model 数据
+        if (this.value) {
+          this.image = normalizeCrmebMediaUrl(this.value);
+        } else {
+          this.image = '';
+        }
+      }
+    },
     handleClose() {
       this.visible = false;
+    },
+    mediaUrl(url) {
+      return normalizeCrmebMediaUrl(url);
     },
     getImage(img) {
       if (this.multiple) {
         let obj = {};
-        this.imageList = img.reduce((cur, next) => {
+        this.imageList = normalizeAttachmentMediaList(img).reduce((cur, next) => {
           obj[next.attId] ? '' : (obj[next.attId] = true && cur.push(next));
           return cur;
         }, []);
         this.$emit('input', JSON.stringify(this.imageList));
       } else {
-        this.image = img[0].sattDir;
+        this.image = normalizeCrmebMediaUrl(img[0].sattDir);
         this.$emit('input', this.image);
       }
       this.visible = false;

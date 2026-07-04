@@ -169,7 +169,7 @@
               >
                 <span class="num_badge" v-if="item.num > 0" :style="{ right: 0 }">{{ item.num }}</span>
                 <img
-                  v-lazy="item.sattDir ? item.sattDir : localImg"
+                  v-lazy="item.sattDir ? mediaUrl(item.sattDir) : localImg"
                   :class="item.isSelect ? 'on' : ''"
                   @click="changImage(item, index, pictrueList.list)"
                   v-if="item.attType !== 'video/mp4'"
@@ -180,7 +180,7 @@
                   }"
                 /><img />
                 <video
-                  :src="item.sattDir"
+                  :src="mediaUrl(item.sattDir)"
                   :class="item.isSelect ? 'on' : ''"
                   @click="changImage(item, index, pictrueList.list)"
                   v-if="item.attType == 'video/mp4'"
@@ -231,8 +231,8 @@
                 <el-table-column label="图片名称">
                   <template slot-scope="scope">
                     <div class="imgDiv">
-                      <img :src="scope.row.sattDir" alt="" class="listImg" v-if="typeDate == 'pic'" />
-                      <video :src="scope.row.sattDir" v-if="typeDate !== 'pic'" class="listImg"></video>
+                      <img :src="mediaUrl(scope.row.sattDir)" alt="" class="listImg" v-if="typeDate == 'pic'" />
+                      <video :src="mediaUrl(scope.row.sattDir)" v-if="typeDate !== 'pic'" class="listImg"></video>
                       <div class="imgName">
                         {{ scope.row.name }}
                       </div>
@@ -334,6 +334,10 @@
           <div class="cropperContent">
             <div class="mb35">
               <div class="title">原始图片</div>
+              <div class="uploadNameRow">
+                <span>图片名称</span>
+                <el-input v-model.trim="uploadFileName" clearable size="small" placeholder="不填则使用原文件名" />
+              </div>
               <div class="cropper mr20">
                 <vue-cropper
                   ref="cropper"
@@ -430,6 +434,11 @@ import { addCategroy, treeCategroy, infoCategroy, updateCategroy, deleteCategroy
 import { fileImageApi, fileListApi, fileDeleteApi, attachmentMoveApi } from '@/api/systemSetting';
 import { getToken } from '@/utils/auth';
 import { checkPermi } from '@/utils/permission'; // 权限判断函数
+import {
+  buildUploadFileName,
+  normalizeAttachmentMediaList,
+  normalizeCrmebMediaUrl,
+} from '@/utils/mediaUrl';
 import { VueCropper } from 'vue-cropper';
 import { Debounce } from '@/utils/validate';
 export default {
@@ -455,6 +464,10 @@ export default {
       type: String,
       default: '',
     },
+    defaultName: {
+      type: String,
+      default: '',
+    },
     // 是否展示上传视频
     isShowVideo: {
       type: Boolean,
@@ -472,6 +485,7 @@ export default {
       //列表类型 1 宫格 0 列表
       listType: 1,
       uploadName: '上传',
+      uploadFileName: this.defaultName,
       fixed: false,
       fixedNumber: [16, 9],
       option: {
@@ -593,6 +607,9 @@ export default {
     filterText(val) {
       this.$refs.tree.filter(val);
     },
+    defaultName(val) {
+      if (!this.uploadFileName) this.uploadFileName = val;
+    },
   },
   computed: {
     gridPicStyle() {
@@ -686,7 +703,7 @@ export default {
         this.loadingPic = true;
         fileListApi(this.tableData)
           .then(async (res) => {
-            this.pictrueList.list = res.list;
+            this.pictrueList.list = normalizeAttachmentMediaList(res.list);
             if (this.tableData.page === 1 && this.pictrueList.list.length > 0)
               this.pictrueList.list[0].localImg = this.localImg;
             if (this.pictrueList.list.length) {
@@ -727,6 +744,13 @@ export default {
       }
     },
     checkPermi,
+    mediaUrl(url) {
+      return normalizeCrmebMediaUrl(url);
+    },
+    appendUploadFile(formData, file, fallbackExt = 'png') {
+      const filename = buildUploadFileName(this.uploadFileName, file && file.name, fallbackExt);
+      formData.append('multipart', file, filename);
+    },
     // 选取图片后自动回调，里面可以获取到文件
     imgSaveToUrl(event) {
       // 也可以用file
@@ -850,10 +874,10 @@ export default {
     handleUploadForm(param) {
       const formData = new FormData();
       const data = {
-        model: 'product',
+        model: this.modelName ? this.modelName : 'product',
         pid: this.tableData.pid ? this.tableData.pid : 0,
       };
-      formData.append('multipart', param.file);
+      this.appendUploadFile(formData, param.file);
       this.uploadPic(formData, data);
     },
     uploadPic(formData, data) {
@@ -881,7 +905,7 @@ export default {
       this.loadingPic = true;
       fileListApi(this.tableData)
         .then(async (res) => {
-          this.pictrueList.list = res.list;
+          this.pictrueList.list = normalizeAttachmentMediaList(res.list);
           if (this.tableData.page === 1 && this.pictrueList.list.length > 0)
             this.pictrueList.list[0].localImg = this.localImg;
           if (this.pictrueList.list.length) {
@@ -1070,6 +1094,7 @@ export default {
     onCallback() {
       this.visiblePic = false;
       this.option.img = '';
+      this.uploadFileName = this.defaultName;
       this.stopCrop();
       this.clearCrop();
     },
@@ -1123,14 +1148,14 @@ export default {
     },
     uploadNewPic: Debounce(function () {
       this.$refs.cropper.getCropData((data) => {
-        let name = new Date().getTime();
-        let file = this.dataURLtoFile(data, `${name}.png`);
+        const fileName = buildUploadFileName(this.uploadFileName, `${new Date().getTime()}.png`, 'png');
+        let file = this.dataURLtoFile(data, fileName);
         const datas = {
           model: this.modelName ? this.modelName : 'product',
           pid: this.tableData.pid ? this.tableData.pid : 0,
         };
         let formData = new FormData();
-        formData.append('multipart', file);
+        formData.append('multipart', file, file.name);
         this.uploadPic(formData, datas);
       });
     }),
@@ -1258,6 +1283,18 @@ export default {
     width: 180px;
     position: absolute;
     clip: rect(0 0 0 0);
+  }
+
+  .uploadNameRow {
+    display: flex;
+    align-items: center;
+    width: 520px;
+    margin-bottom: 18px;
+    span {
+      width: 70px;
+      color: #606266;
+      font-size: 14px;
+    }
   }
 }
 

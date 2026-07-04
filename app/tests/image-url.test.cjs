@@ -24,6 +24,11 @@ assert.strictEqual(
 );
 
 assert.strictEqual(
+  normalizeImageUrl('crmebimage/public/logo.png', { imageHost: '' }),
+  '/crmebimage/public/logo.png'
+);
+
+assert.strictEqual(
   normalizeImageUrl('undefinedcrmebimage/presets/seckill_bg_pic.png', { imageHost }),
   'https://cdn.example.com/crmebimage/presets/seckill_bg_pic.png'
 );

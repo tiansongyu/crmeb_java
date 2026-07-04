@@ -14,6 +14,7 @@ import store from '@/store';
 import { getToken } from '@/utils/auth';
 import SettingMer from '@/utils/settingMer';
 import { isPhone } from '@/libs/wechat';
+import { normalizeCrmebMediaTree } from '@/utils/mediaUrl';
 const service = axios.create({
   baseURL: SettingMer.apiBaseURL,
   timeout: 60000, // 过期时间
@@ -42,6 +43,7 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   (response) => {
     const res = response.data;
+    if (res && res.data) normalizeCrmebMediaTree(res.data);
     // if the custom code is not 20000, it is judged as an error.
     if (res.code === 401) {
       // to re-login
