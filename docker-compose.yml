@@ -58,7 +58,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES: "true"
-      SPRING_MAIN_LAZY_INITIALIZATION: "false"
+      SPRING_MAIN_LAZY_INITIALIZATION: "true"
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-crmeb}?characterEncoding=utf-8&useSSL=false&serverTimeZone=GMT+8
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-crmeb}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-crmeb123}
@@ -90,7 +90,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES: "true"
-      SPRING_MAIN_LAZY_INITIALIZATION: "false"
+      SPRING_MAIN_LAZY_INITIALIZATION: "true"
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-crmeb}?characterEncoding=utf-8&useSSL=false&serverTimeZone=GMT+8
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-crmeb}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-crmeb123}
