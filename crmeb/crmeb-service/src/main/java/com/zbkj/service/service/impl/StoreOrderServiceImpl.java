@@ -601,6 +601,11 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
                 // 退款task
                 redisUtil.lPush(Constants.ORDER_TASK_REDIS_KEY_AFTER_REFUND_BY_USER, storeOrder.getId());
             }
+            if (storeOrder.getPayType().equals(Constants.PAY_TYPE_OFFLINE)) {
+                // 线下扫码转账由后台人工确认退款，不需要第三方退款回调。
+                userBillService.saveRefundBill(request, user);
+                redisUtil.lPush(Constants.ORDER_TASK_REDIS_KEY_AFTER_REFUND_BY_USER, storeOrder.getId());
+            }
             return Boolean.TRUE;
         });
         if (!execute) {

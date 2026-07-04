@@ -178,6 +178,15 @@ public class StoreOrderInfoResponse implements Serializable {
     @ApiModelProperty(value = "退款图片")
     private String refundReasonWapImg;
 
+    @ApiModelProperty(value = "退款用户说明")
+    private String refundReasonWapExplain;
+
+    @ApiModelProperty(value = "前台退款原因")
+    private String refundReasonWap;
+
+    @ApiModelProperty(value = "不退款的理由")
+    private String refundReason;
+
     @ApiModelProperty(value = "商家寄件单号图片")
     private String shipmentPic;
 

@@ -331,17 +331,20 @@ public class UserExtractServiceImpl extends ServiceImpl<UserExtractDao, UserExtr
     public PageInfo<UserExtractRecordResponse> getExtractRecord(Integer userId, PageParamRequest pageParamRequest) {
         Page<UserExtract> userExtractPage = PageHelper.startPage(pageParamRequest.getPage(), pageParamRequest.getLimit());
         QueryWrapper<UserExtract> queryWrapper = new QueryWrapper<>();
+        queryWrapper.select("left(create_time, 7) as month");
         queryWrapper.eq("uid", userId);
 
         queryWrapper.groupBy("left(create_time, 7)");
-        queryWrapper.orderByDesc("left(create_time, 7)");
-        List<UserExtract> list = dao.selectList(queryWrapper);
+        queryWrapper.orderByDesc("month");
+        List<HashMap<String, Object>> list = dao.selectMaps(queryWrapper).stream()
+                .map(HashMap::new)
+                .collect(Collectors.toList());
         if (CollUtil.isEmpty(list)) {
-            return new PageInfo<>();
+            return CommonPage.copyPageInfo(userExtractPage, CollectionUtil.newArrayList());
         }
         ArrayList<UserExtractRecordResponse> userExtractRecordResponseList = CollectionUtil.newArrayList();
-        for (UserExtract userExtract : list) {
-            String date = CrmebDateUtil.dateToStr(userExtract.getCreateTime(), Constants.DATE_FORMAT_MONTH);
+        for (HashMap<String, Object> userExtract : list) {
+            String date = String.valueOf(userExtract.get("month"));
             userExtractRecordResponseList.add(new UserExtractRecordResponse(date, getListByMonth(userId, date)));
         }
 
@@ -459,4 +462,3 @@ public class UserExtractServiceImpl extends ServiceImpl<UserExtractDao, UserExtr
         return dao.selectCount(lqw);
     }
 }
-

@@ -159,19 +159,20 @@ public class UserBrokerageRecordServiceImpl extends ServiceImpl<UserBrokerageRec
     public PageInfo<SpreadCommissionDetailResponse> findDetailListByUid(Integer uid, PageParamRequest pageParamRequest) {
         Page<UserBrokerageRecord> recordPage = PageHelper.startPage(pageParamRequest.getPage(), pageParamRequest.getLimit());
         QueryWrapper<UserBrokerageRecord> queryWrapper = new QueryWrapper<>();
+        queryWrapper.select("left(update_time, 7) as month");
         queryWrapper.eq("uid", uid);
         queryWrapper.in("status", BrokerageRecordConstants.BROKERAGE_RECORD_STATUS_COMPLETE
                 , BrokerageRecordConstants.BROKERAGE_RECORD_STATUS_WITHDRAW);
         queryWrapper.groupBy("left(update_time, 7)");
-        queryWrapper.orderByDesc("left(update_time, 7)");
-        List<UserBrokerageRecord> list = dao.selectList(queryWrapper);
-        if (CollUtil.isEmpty(list)) {
-            return new PageInfo<>();
+        queryWrapper.orderByDesc("month");
+        List<Map<String, Object>> monthList = dao.selectMaps(queryWrapper);
+        if (CollUtil.isEmpty(monthList)) {
+            return CommonPage.copyPageInfo(recordPage, CollUtil.newArrayList());
         }
 
         List<SpreadCommissionDetailResponse> responseList = CollUtil.newArrayList();
-        for (UserBrokerageRecord record : list) {
-            String month = CrmebDateUtil.dateToStr(record.getUpdateTime(), Constants.DATE_FORMAT_MONTH);
+        for (Map<String, Object> record : monthList) {
+            String month = String.valueOf(record.get("month"));
             responseList.add(new SpreadCommissionDetailResponse(month, getListByUidAndMonth(uid, month)));
         }
         return CommonPage.copyPageInfo(recordPage, responseList);
@@ -471,4 +472,3 @@ public class UserBrokerageRecordServiceImpl extends ServiceImpl<UserBrokerageRec
         return dao.selectList(lqw);
     }
 }
-

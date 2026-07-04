@@ -5,6 +5,7 @@ import com.zbkj.service.service.OrderTaskService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
@@ -31,6 +32,7 @@ public class OrderPaySuccessTask {
     /**
      * 1分钟同步一次数据
      */
+    @Scheduled(fixedDelay = 1000 * 60L)
     public void orderPayAfter() {
         // cron : 0 */1 * * * ?
         logger.info("---OrderPaySuccessTask task------produce Data with fixed rate task: Execution Time - {}", CrmebDateUtil.nowDateTime());

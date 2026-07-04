@@ -31,6 +31,7 @@ public class OrderRefundTask {
     /**
      * 1分钟同步一次数据
      */
+    @Scheduled(fixedDelay = 1000 * 60L)
     public void orderRefund() {
         // cron : 0 */1 * * * ?
         logger.info("---OrderRefundTask task------produce Data with fixed rate task: Execution Time - {}", CrmebDateUtil.nowDateTime());
@@ -41,12 +42,5 @@ public class OrderRefundTask {
             e.printStackTrace();
             logger.error("OrderRefundTask.task" + " | msg : " + e.getMessage());
         }
-    }
-
-
-    @Scheduled(fixedDelay = 1000 * 60L) //
-    public void init(){
-
-
     }
 }

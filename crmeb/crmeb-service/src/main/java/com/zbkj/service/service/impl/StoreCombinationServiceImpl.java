@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -90,6 +91,7 @@ public class StoreCombinationServiceImpl extends ServiceImpl<StoreCombinationDao
     @Autowired
     private StoreOrderService storeOrderService;
 
+    @Lazy
     @Autowired
     private OrderService orderService;
 
@@ -1143,4 +1145,3 @@ public class StoreCombinationServiceImpl extends ServiceImpl<StoreCombinationDao
         return attrMapList;
     }
 }
-

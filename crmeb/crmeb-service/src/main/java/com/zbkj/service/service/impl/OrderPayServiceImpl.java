@@ -838,7 +838,6 @@ public class OrderPayServiceImpl implements OrderPayService {
             if (storeOrder.getUseIntegral() > 0) {
                 userService.updateIntegral(user, storeOrder.getUseIntegral(), "sub");
             }
-            redisUtil.lPush(TaskConstants.ORDER_TASK_PAY_SUCCESS_AFTER, storeOrder.getOrderId());
             if (storeOrder.getCombinationId() > 0) {
                 createCombinationPink(storeOrder, user);
             }
@@ -847,6 +846,9 @@ public class OrderPayServiceImpl implements OrderPayService {
         });
         if (!execute) {
             throw new CrmebException("线下付款审核通过失败");
+        }
+        if (!paySuccess(storeOrder)) {
+            throw new CrmebException("线下付款支付成功后置处理失败");
         }
         return execute;
     }
