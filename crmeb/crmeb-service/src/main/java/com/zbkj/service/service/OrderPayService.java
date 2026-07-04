@@ -1,6 +1,8 @@
 package com.zbkj.service.service;
 
 import com.zbkj.common.model.order.StoreOrder;
+import com.zbkj.common.request.OfflinePayAuditRequest;
+import com.zbkj.common.request.OfflinePayProofRequest;
 import com.zbkj.common.request.OrderPayRequest;
 import com.zbkj.common.response.OrderPayResultResponse;
 import com.zbkj.common.response.PayConfigResponse;
@@ -38,4 +40,14 @@ public interface OrderPayService{
      * @return OrderPayResultResponse
      */
     OrderPayResultResponse payment(OrderPayRequest orderPayRequest, String ip);
+
+    /**
+     * 提交线下扫码转账付款凭证
+     */
+    OrderPayResultResponse submitOfflineProof(OfflinePayProofRequest request);
+
+    /**
+     * 审核线下扫码转账付款凭证
+     */
+    Boolean auditOfflinePay(OfflinePayAuditRequest request);
 }

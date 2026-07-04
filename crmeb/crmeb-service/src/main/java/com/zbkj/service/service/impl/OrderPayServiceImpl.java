@@ -23,12 +23,16 @@ import com.zbkj.common.model.system.SystemAdmin;
 import com.zbkj.common.model.system.SystemNotification;
 import com.zbkj.common.model.user.*;
 
+import com.zbkj.common.request.OfflinePayAuditRequest;
+import com.zbkj.common.request.OfflinePayProofRequest;
 import com.zbkj.common.request.OrderPayRequest;
 import com.zbkj.common.response.OrderPayResultResponse;
 import com.zbkj.common.response.PayConfigResponse;
 import com.zbkj.common.utils.CrmebUtil;
 import com.zbkj.common.utils.CrmebDateUtil;
+import com.zbkj.common.utils.OfflinePayUtil;
 import com.zbkj.common.utils.RedisUtil;
+import com.zbkj.common.utils.SecurityUtil;
 import com.zbkj.common.utils.WxPayUtil;
 import com.zbkj.common.vo.*;
 import com.zbkj.service.delete.OrderUtils;
@@ -172,15 +176,11 @@ public class OrderPayServiceImpl implements OrderPayService {
      */
     @Override
     public PayConfigResponse getPayConfig() {
-        String payWxOpen = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_PAY_WEIXIN_OPEN);
-        String yuePayStatus = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_YUE_PAY_STATUS);
         PayConfigResponse response = new PayConfigResponse();
-        response.setYuePayStatus(Constants.CONFIG_FORM_SWITCH_OPEN.equals(yuePayStatus));
-        response.setPayWechatOpen(Constants.CONFIG_FORM_SWITCH_OPEN.equals(payWxOpen));
-        if (Constants.CONFIG_FORM_SWITCH_OPEN.equals(yuePayStatus)) {
-            User user = userService.getInfo();
-            response.setUserBalance(user.getNowMoney());
-        }
+        response.setYuePayStatus(false);
+        response.setPayWechatOpen(false);
+        response.setUserBalance(BigDecimal.ZERO);
+        fillOfflinePayConfig(response);
         return response;
     }
 
@@ -700,29 +700,20 @@ public class OrderPayServiceImpl implements OrderPayService {
         User user = userService.getById(storeOrder.getUid());
         if (ObjectUtil.isNull(user)) throw new CrmebException("用户不存在");
 
-        // 根据支付类型进行校验,更换支付类型
-        storeOrder.setPayType(orderPayRequest.getPayType());
-        // 余额支付
-        if (orderPayRequest.getPayType().equals(PayConstants.PAY_TYPE_YUE)) {
-            if (user.getNowMoney().compareTo(storeOrder.getPayPrice()) < 0) {
-                throw new CrmebException("用户余额不足");
-            }
-            storeOrder.setPayType(PayConstants.PAY_TYPE_YUE);
-            storeOrder.setIsChannel(3);
+        if (!PayConstants.PAY_TYPE_OFFLINE.equals(orderPayRequest.getPayType())) {
+            throw new CrmebException("当前版本仅支持扫码转账支付");
         }
-        if (orderPayRequest.getPayType().equals(PayConstants.PAY_TYPE_WE_CHAT)) {
-            switch (orderPayRequest.getPayChannel()){
-                case PayConstants.PAY_CHANNEL_WE_CHAT_H5:// H5
-                    storeOrder.setIsChannel(2);
-                    break;
-                case PayConstants.PAY_CHANNEL_WE_CHAT_PUBLIC:// 公众号
-                    storeOrder.setIsChannel(0);
-                    break;
-                case PayConstants.PAY_CHANNEL_WE_CHAT_PROGRAM:// 小程序
-                    storeOrder.setIsChannel(1);
-                    break;
-            }
-            storeOrder.setPayType(PayConstants.PAY_TYPE_WE_CHAT);
+        if (!isOfflinePayOpen()) {
+            throw new CrmebException("扫码转账支付未开启");
+        }
+        if (user.getIntegral() < storeOrder.getUseIntegral()) {
+            throw new CrmebException("用户积分不足");
+        }
+
+        storeOrder.setPayType(PayConstants.PAY_TYPE_OFFLINE);
+        storeOrder.setIsChannel(8);
+        if (ObjectUtil.isNull(storeOrder.getOfflinePayStatus())) {
+            storeOrder.setOfflinePayStatus(OfflinePayConstants.STATUS_NOT_SUBMITTED);
         }
         storeOrder.setUpdateTime(DateUtil.date());
         boolean changePayType = storeOrderService.updateById(storeOrder);
@@ -730,61 +721,245 @@ public class OrderPayServiceImpl implements OrderPayService {
             throw new CrmebException("变更订单支付类型失败!");
         }
 
+        OrderPayResultResponse response = new OrderPayResultResponse();
+        response.setOrderNo(storeOrder.getOrderId());
+        response.setPayType(storeOrder.getPayType());
+        response.setStatus(true);
+        response.setOfflinePayStatus(storeOrder.getOfflinePayStatus());
+        response.setOfflinePayStatusText(OfflinePayUtil.getStatusText(storeOrder.getOfflinePayStatus()));
+        fillOfflinePayConfig(response);
+        return response;
+    }
+
+    /**
+     * 提交线下扫码转账付款凭证
+     */
+    @Override
+    public OrderPayResultResponse submitOfflineProof(OfflinePayProofRequest request) {
+        if (!isOfflinePayOpen()) {
+            throw new CrmebException("扫码转账支付未开启");
+        }
+        User user = userService.getInfoException();
+        StoreOrder storeOrder = storeOrderService.getByOderId(request.getOrderNo());
+        if (ObjectUtil.isNull(storeOrder) || storeOrder.getIsDel() || storeOrder.getIsSystemDel()) {
+            throw new CrmebException("订单不存在");
+        }
+        if (!storeOrder.getUid().equals(user.getUid())) {
+            throw new CrmebException("订单不存在");
+        }
+        if (storeOrder.getPaid()) {
+            throw new CrmebException("订单已支付");
+        }
+        if (!PayConstants.PAY_TYPE_OFFLINE.equals(storeOrder.getPayType())) {
+            storeOrder.setPayType(PayConstants.PAY_TYPE_OFFLINE);
+            storeOrder.setIsChannel(8);
+        }
+
+        storeOrder.setOfflinePayStatus(OfflinePayConstants.STATUS_PENDING);
+        storeOrder.setOfflinePayVoucher(request.getVoucher());
+        storeOrder.setOfflinePayTradeNo(request.getTradeNo());
+        storeOrder.setOfflinePayRemark(request.getRemark());
+        storeOrder.setOfflinePayRefuseReason("");
+        storeOrder.setOfflinePaySubmitTime(CrmebDateUtil.nowDateTime());
+        storeOrder.setOfflinePayAuditTime(null);
+        storeOrder.setOfflinePayAuditAdminId(null);
+        storeOrder.setUpdateTime(DateUtil.date());
+
+        Boolean execute = transactionTemplate.execute(e -> {
+            storeOrderService.updateById(storeOrder);
+            storeOrderStatusService.createLog(storeOrder.getId(), Constants.ORDER_LOG_PAY_OFFLINE, "用户提交线下付款凭证，等待后台审核");
+            return Boolean.TRUE;
+        });
+        if (!execute) {
+            throw new CrmebException("提交付款凭证失败");
+        }
+
+        OrderPayResultResponse response = new OrderPayResultResponse();
+        response.setStatus(true);
+        response.setOrderNo(storeOrder.getOrderId());
+        response.setPayType(PayConstants.PAY_TYPE_OFFLINE);
+        response.setOfflinePayStatus(storeOrder.getOfflinePayStatus());
+        response.setOfflinePayStatusText(OfflinePayUtil.getStatusText(storeOrder.getOfflinePayStatus()));
+        fillOfflinePayConfig(response);
+        return response;
+    }
+
+    /**
+     * 审核线下扫码转账付款凭证
+     */
+    @Override
+    public Boolean auditOfflinePay(OfflinePayAuditRequest request) {
+        StoreOrder storeOrder = storeOrderService.getByOderId(request.getOrderNo());
+        if (ObjectUtil.isNull(storeOrder) || storeOrder.getIsDel() || storeOrder.getIsSystemDel()) {
+            throw new CrmebException("订单不存在");
+        }
+        if (storeOrder.getPaid()) {
+            throw new CrmebException("订单已支付");
+        }
+        if (!PayConstants.PAY_TYPE_OFFLINE.equals(storeOrder.getPayType())) {
+            throw new CrmebException("订单不是扫码转账支付");
+        }
+        if (!OfflinePayUtil.isPending(storeOrder.getOfflinePayStatus())) {
+            throw new CrmebException("订单不是待审核状态");
+        }
+        if (!request.getApproved() && StrUtil.isBlank(request.getReason())) {
+            throw new CrmebException("请填写驳回原因");
+        }
+
+        Integer adminId = getCurrentAdminId();
+        if (request.getApproved()) {
+            return approveOfflinePay(storeOrder, adminId);
+        }
+        return rejectOfflinePay(storeOrder, request.getReason(), adminId);
+    }
+
+    /**
+     * 线下扫码转账审核通过
+     */
+    private Boolean approveOfflinePay(StoreOrder storeOrder, Integer adminId) {
+        User user = userService.getById(storeOrder.getUid());
+        if (ObjectUtil.isNull(user)) {
+            throw new CrmebException("用户不存在");
+        }
         if (user.getIntegral() < storeOrder.getUseIntegral()) {
             throw new CrmebException("用户积分不足");
         }
 
-        OrderPayResultResponse response = new OrderPayResultResponse();
-        response.setOrderNo(storeOrder.getOrderId());
-        response.setPayType(storeOrder.getPayType());
-        // 0元付
-        if (storeOrder.getPayPrice().compareTo(BigDecimal.ZERO) <= 0) {
-            Boolean aBoolean = yuePay(storeOrder);
-            response.setPayType(PayConstants.PAY_TYPE_YUE);
-            response.setStatus(aBoolean);
-            return response;
-        }
+        storeOrder.setPaid(true);
+        storeOrder.setPayTime(CrmebDateUtil.nowDateTime());
+        storeOrder.setOfflinePayStatus(OfflinePayConstants.STATUS_APPROVED);
+        storeOrder.setOfflinePayAuditTime(CrmebDateUtil.nowDateTime());
+        storeOrder.setOfflinePayAuditAdminId(adminId);
+        storeOrder.setOfflinePayRefuseReason("");
+        storeOrder.setUpdateTime(DateUtil.date());
 
-        // 微信支付，调用微信预下单，返回拉起微信支付需要的信息
-        if (storeOrder.getPayType().equals(PayConstants.PAY_TYPE_WE_CHAT)) {
-            // 预下单
-            Map<String, String> unifiedorder = unifiedorder(storeOrder, ip);
-            response.setStatus(true);
-
-            WxPayJsResultVo vo = new WxPayJsResultVo();
-            vo.setAppId(unifiedorder.get("appId"));
-            vo.setNonceStr(unifiedorder.get("nonceStr"));
-            vo.setPackages(unifiedorder.get("package"));
-            vo.setSignType(unifiedorder.get("signType"));
-            vo.setTimeStamp(unifiedorder.get("timeStamp"));
-            vo.setPaySign(unifiedorder.get("paySign"));
-            if (storeOrder.getIsChannel() == 2) {
-                vo.setMwebUrl(unifiedorder.get("mweb_url"));
-                response.setPayType(PayConstants.PAY_CHANNEL_WE_CHAT_H5);
-            }
-            if (storeOrder.getIsChannel() == 4 || storeOrder.getIsChannel() == 5) {
-                vo.setPartnerid(unifiedorder.get("partnerid"));
-            }
-            // 更新商户订单号
-            storeOrder.setOutTradeNo(unifiedorder.get("outTradeNo"));
-            storeOrder.setUpdateTime(DateUtil.date());
+        Boolean execute = transactionTemplate.execute(e -> {
             storeOrderService.updateById(storeOrder);
-            response.setJsConfig(vo);
+            if (storeOrder.getUseIntegral() > 0) {
+                userService.updateIntegral(user, storeOrder.getUseIntegral(), "sub");
+            }
+            redisUtil.lPush(TaskConstants.ORDER_TASK_PAY_SUCCESS_AFTER, storeOrder.getOrderId());
+            if (storeOrder.getCombinationId() > 0) {
+                createCombinationPink(storeOrder, user);
+            }
+            storeOrderStatusService.createLog(storeOrder.getId(), Constants.ORDER_LOG_PAY_OFFLINE, "后台确认线下付款，订单支付成功");
+            return Boolean.TRUE;
+        });
+        if (!execute) {
+            throw new CrmebException("线下付款审核通过失败");
+        }
+        return execute;
+    }
 
-            return response;
-        }
-        // 余额支付
-        if (storeOrder.getPayType().equals(PayConstants.PAY_TYPE_YUE)) {
-            Boolean yueBoolean = yuePay(storeOrder);
-            response.setStatus(yueBoolean);
-            return response;
-        }
+    /**
+     * 线下扫码转账审核驳回
+     */
+    private Boolean rejectOfflinePay(StoreOrder storeOrder, String reason, Integer adminId) {
+        storeOrder.setOfflinePayStatus(OfflinePayConstants.STATUS_REJECTED);
+        storeOrder.setOfflinePayRefuseReason(reason);
+        storeOrder.setOfflinePayAuditTime(CrmebDateUtil.nowDateTime());
+        storeOrder.setOfflinePayAuditAdminId(adminId);
+        storeOrder.setUpdateTime(DateUtil.date());
 
-        if (storeOrder.getPayType().equals(PayConstants.PAY_TYPE_OFFLINE)) {
-            throw new CrmebException("暂时不支持线下支付");
+        Boolean execute = transactionTemplate.execute(e -> {
+            storeOrderService.updateById(storeOrder);
+            storeOrderStatusService.createLog(storeOrder.getId(), Constants.ORDER_LOG_OFFLINE_PAY_REJECT, "线下付款凭证被驳回：" + reason);
+            return Boolean.TRUE;
+        });
+        if (!execute) {
+            throw new CrmebException("线下付款审核驳回失败");
         }
-        response.setStatus(false);
-        return response;
+        return execute;
+    }
+
+    /**
+     * 拼团订单支付成功后生成拼团记录
+     */
+    private void createCombinationPink(StoreOrder storeOrder, User user) {
+        StorePink headPink = new StorePink();
+        Integer pinkId = storeOrder.getPinkId();
+        if (pinkId > 0) {
+            headPink = storePinkService.getById(pinkId);
+            if (ObjectUtil.isNull(headPink) || headPink.getIsRefund().equals(true) || headPink.getStatus() == 3) {
+                pinkId = 0;
+            }
+        }
+        StoreCombination storeCombination = storeCombinationService.getById(storeOrder.getCombinationId());
+        if (pinkId > 0) {
+            Integer count = storePinkService.getCountByKid(pinkId);
+            if (count >= storeCombination.getPeople()) {
+                pinkId = 0;
+            }
+        }
+        StorePink storePink = new StorePink();
+        storePink.setUid(user.getUid());
+        storePink.setAvatar(user.getAvatar());
+        storePink.setNickname(user.getNickname());
+        storePink.setOrderId(storeOrder.getOrderId());
+        storePink.setOrderIdKey(storeOrder.getId());
+        storePink.setTotalNum(storeOrder.getTotalNum());
+        storePink.setTotalPrice(storeOrder.getTotalPrice());
+        storePink.setCid(storeCombination.getId());
+        storePink.setPid(storeCombination.getProductId());
+        storePink.setPeople(storeCombination.getPeople());
+        storePink.setPrice(storeCombination.getPrice());
+        Integer effectiveTime = storeCombination.getEffectiveTime();
+        DateTime dateTime = cn.hutool.core.date.DateUtil.date();
+        storePink.setAddTime(dateTime.getTime());
+        if (pinkId > 0) {
+            storePink.setStopTime(headPink.getStopTime());
+        } else {
+            DateTime hourTime = cn.hutool.core.date.DateUtil.offsetHour(dateTime, effectiveTime);
+            long stopTime = hourTime.getTime();
+            if (stopTime > storeCombination.getStopTime()) {
+                stopTime = storeCombination.getStopTime();
+            }
+            storePink.setStopTime(stopTime);
+        }
+        storePink.setKId(pinkId);
+        storePink.setIsTpl(false);
+        storePink.setIsRefund(false);
+        storePink.setStatus(1);
+        storePinkService.save(storePink);
+        storeOrder.setPinkId(storePink.getId());
+        storeOrder.setUpdateTime(DateUtil.date());
+        storeOrderService.updateById(storeOrder);
+    }
+
+    private Boolean isOfflinePayOpen() {
+        String status = systemConfigService.getValueByKey(OfflinePayConstants.CONFIG_OFFLINE_PAY_STATUS);
+        return Constants.CONFIG_FORM_SWITCH_OPEN.equals(status)
+                || "true".equalsIgnoreCase(status);
+    }
+
+    private void fillOfflinePayConfig(PayConfigResponse response) {
+        response.setOfflinePayStatus(isOfflinePayOpen());
+        response.setOfflinePayQrcode(getConfigValue(OfflinePayConstants.CONFIG_OFFLINE_PAY_QRCODE));
+        response.setOfflinePayName(getConfigValue(OfflinePayConstants.CONFIG_OFFLINE_PAY_NAME));
+        response.setOfflinePayTips(getConfigValue(OfflinePayConstants.CONFIG_OFFLINE_PAY_TIPS));
+    }
+
+    private void fillOfflinePayConfig(OrderPayResultResponse response) {
+        response.setOfflinePayQrcode(getConfigValue(OfflinePayConstants.CONFIG_OFFLINE_PAY_QRCODE));
+        response.setOfflinePayName(getConfigValue(OfflinePayConstants.CONFIG_OFFLINE_PAY_NAME));
+        response.setOfflinePayTips(getConfigValue(OfflinePayConstants.CONFIG_OFFLINE_PAY_TIPS));
+    }
+
+    private String getConfigValue(String key) {
+        String value = systemConfigService.getValueByKey(key);
+        return StrUtil.isBlank(value) ? "" : value;
+    }
+
+    private Integer getCurrentAdminId() {
+        try {
+            LoginUserVo loginUserVo = SecurityUtil.getLoginUserVo();
+            if (ObjectUtil.isNotNull(loginUserVo) && ObjectUtil.isNotNull(loginUserVo.getUser())) {
+                return loginUserVo.getUser().getId();
+            }
+        } catch (Exception e) {
+            logger.warn("获取当前后台管理员失败，线下付款审核管理员字段将为空");
+        }
+        return null;
     }
 
     /**

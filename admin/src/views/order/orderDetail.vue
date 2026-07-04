@@ -32,6 +32,10 @@
               <div>{{ orderDatalist.createTime || '-' }}</div>
             </li>
           </ul>
+          <div class="offline-head-actions" v-if="canAuditOfflinePay(orderDatalist)">
+            <el-button type="success" size="mini" @click="auditOfflinePay(true)">确认已收款</el-button>
+            <el-button type="danger" size="mini" @click="auditOfflinePay(false)">驳回凭证</el-button>
+          </div>
         </div>
         <el-tabs type="border-card" v-model="activeName">
           <el-tab-pane label="订单信息" name="detail">
@@ -132,6 +136,55 @@
                   <div class="value">{{ orderDatalist.spreadName | filterEmpty }}</div>
                 </li>
               </ul>
+            </div>
+            <div v-if="orderDatalist.payType === 'offline'" class="detailSection">
+              <div class="title">线下付款</div>
+              <ul class="list">
+                <li class="item">
+                  <div class="lang">付款状态：</div>
+                  <div class="value">
+                    <el-tag size="mini" :type="offlineStatusType(orderDatalist.offlinePayStatus)">
+                      {{ orderDatalist.offlinePayStatusText || '-' }}
+                    </el-tag>
+                  </div>
+                </li>
+                <li class="item">
+                  <div class="lang">提交时间：</div>
+                  <div class="value">{{ orderDatalist.offlinePaySubmitTime | filterEmpty }}</div>
+                </li>
+                <li class="item">
+                  <div class="lang">交易号：</div>
+                  <div class="value">{{ orderDatalist.offlinePayTradeNo | filterEmpty }}</div>
+                </li>
+                <li class="item">
+                  <div class="lang">付款备注：</div>
+                  <div class="value">{{ orderDatalist.offlinePayRemark | filterEmpty }}</div>
+                </li>
+                <li class="item" v-if="orderDatalist.offlinePayRefuseReason">
+                  <div class="lang">驳回原因：</div>
+                  <div class="value">{{ orderDatalist.offlinePayRefuseReason }}</div>
+                </li>
+                <li class="item">
+                  <div class="lang">审核时间：</div>
+                  <div class="value">{{ orderDatalist.offlinePayAuditTime | filterEmpty }}</div>
+                </li>
+                <li class="item">
+                  <div class="lang">付款截图：</div>
+                  <div class="value">
+                    <el-image
+                      v-if="orderDatalist.offlinePayVoucher"
+                      class="offline-proof-image"
+                      :src="orderDatalist.offlinePayVoucher"
+                      :preview-src-list="[orderDatalist.offlinePayVoucher]"
+                    />
+                    <span v-else>-</span>
+                  </div>
+                </li>
+              </ul>
+              <div class="offline-section-actions" v-if="canAuditOfflinePay(orderDatalist)">
+                <el-button type="success" size="small" @click="auditOfflinePay(true)">确认已收款</el-button>
+                <el-button type="danger" size="small" @click="auditOfflinePay(false)">驳回凭证</el-button>
+              </div>
             </div>
             <div class="detailSection">
               <div class="title">买家留言</div>
@@ -303,7 +356,7 @@
 // | Author: CRMEB Team <admin@crmeb.com>
 // +----------------------------------------------------------------------
 
-import { getLogisticsInfoApi, orderInvoiceListApi, orderDetailApi, refundOrderDetailApi } from '@/api/order';
+import { getLogisticsInfoApi, offlinePayAuditApi, orderDetailApi } from '@/api/order';
 import { checkPermi } from '@/utils/permission';
 export default {
   name: 'OrderDetail',
@@ -333,6 +386,45 @@ export default {
   },
   methods: {
     checkPermi,
+    canAuditOfflinePay(row) {
+      return row && row.payType === 'offline' && row.paid === false && row.offlinePayStatus === 1;
+    },
+    offlineStatusType(status) {
+      const statusMap = {
+        1: 'warning',
+        2: 'success',
+        3: 'danger',
+      };
+      return statusMap[status] || 'info';
+    },
+    auditOfflinePay(approved) {
+      const submit = (reason = '') => {
+        offlinePayAuditApi({
+          orderNo: this.orderDatalist.orderId,
+          approved,
+          reason,
+        }).then(() => {
+          this.$message.success(approved ? '已确认付款' : '已驳回付款凭证');
+          this.getDetail(this.orderDatalist.orderId);
+          this.$emit('refreshList');
+        });
+      };
+      if (approved) {
+        this.$confirm(`确认订单 ${this.orderDatalist.orderId} 已收到线下转账？`, '线下付款审核', {
+          confirmButtonText: '确认通过',
+          cancelButtonText: '取消',
+          type: 'warning',
+        }).then(() => submit());
+        return;
+      }
+      this.$prompt('请输入驳回原因', '驳回付款凭证', {
+        confirmButtonText: '确认驳回',
+        cancelButtonText: '取消',
+        inputType: 'textarea',
+        inputValidator: (value) => !!value && value.trim().length > 0,
+        inputErrorMessage: '驳回原因不能为空',
+      }).then(({ value }) => submit(value.trim()));
+    },
     //修改物流信息
     handleEditLogistics(row) {
       this.editDeliveryDialogVisible = true;
@@ -344,12 +436,6 @@ export default {
     },
     handleClose() {
       this.dialogVisible = false;
-    },
-    // 获取订单退款信息
-    getRefundOrderDetail(id) {
-      refundOrderDetailApi(id).then(async (res) => {
-        this.refundInfo = res;
-      });
     },
     openLogistics() {
       this.getOrderData();
@@ -445,6 +531,22 @@ export default {
     width: 50px;
     height: 50px;
   }
+}
+
+.offline-head-actions {
+  margin-top: 12px;
+  padding-left: 20px;
+}
+
+.offline-section-actions {
+  margin-top: 12px;
+  padding-left: 70px;
+}
+
+.offline-proof-image {
+  width: 96px;
+  height: 96px;
+  border-radius: 4px;
 }
 
 .logistics {

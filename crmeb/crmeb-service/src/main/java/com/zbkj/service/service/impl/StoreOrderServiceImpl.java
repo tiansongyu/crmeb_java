@@ -33,6 +33,7 @@ import com.zbkj.common.request.onepass.OnePassShipmentCreateOrderRequest;
 import com.zbkj.common.response.*;
 import com.zbkj.common.utils.CrmebDateUtil;
 import com.zbkj.common.utils.CrmebUtil;
+import com.zbkj.common.utils.OfflinePayUtil;
 import com.zbkj.common.utils.RedisUtil;
 import com.zbkj.common.utils.ValidateFormUtil;
 import com.zbkj.common.vo.*;
@@ -155,7 +156,9 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
         queryWrapper.select("id", "order_id", "uid", "real_name", "pay_price", "pay_type", "create_time", "status", "refund_status"
                 , "refund_reason_wap_img", "refund_reason_wap_explain", "refund_reason_wap", "refund_reason", "refund_reason_time"
                 , "is_del", "combination_id", "pink_id", "seckill_id", "bargain_id", "verify_code", "remark", "paid", "is_system_del"
-                , "shipping_type", "type", "is_alter_price", "pro_total_price", "is_alter_price", "coupon_price");
+                , "shipping_type", "type", "is_alter_price", "pro_total_price", "is_alter_price", "coupon_price"
+                , "offline_pay_status", "offline_pay_voucher", "offline_pay_trade_no", "offline_pay_remark", "offline_pay_refuse_reason"
+                , "offline_pay_submit_time", "offline_pay_audit_time", "offline_pay_audit_admin_id");
         if (StrUtil.isNotBlank(request.getOrderNo())) {
             queryWrapper.eq("order_id", request.getOrderNo());
         }
@@ -319,6 +322,7 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
             storeOrderItemResponse.setStatus(storeOrder.getStatus());
             //支付方式
             storeOrderItemResponse.setPayTypeStr(getPayType(storeOrder.getPayType()));
+            storeOrderItemResponse.setOfflinePayStatusText(OfflinePayUtil.getStatusText(storeOrder.getOfflinePayStatus()));
 
             // 添加订单类型信息
             storeOrderItemResponse.setOrderType(getOrderTypeStr(storeOrder));
@@ -625,6 +629,7 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
         storeOrderInfoResponse.setOrderInfo(orderInfos);
         storeOrderInfoResponse.setPayTypeStr(getPayType(storeOrder.getPayType()));
         storeOrderInfoResponse.setStatusStr(getStatus(storeOrder));
+        storeOrderInfoResponse.setOfflinePayStatusText(OfflinePayUtil.getStatusText(storeOrder.getOfflinePayStatus()));
         storeOrderInfoResponse.setRefundReasonWapImg(storeOrder.getRefundReasonWapImg());
         if (ObjectUtil.isNotNull(storeOrder.getStoreId()) && storeOrder.getStoreId() > 0) {
             SystemStore systemStorePram = new SystemStore();
@@ -1197,6 +1202,10 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
         response.setRefunded(getCount(dateLimit, Constants.ORDER_STATUS_REFUNDED, type, orderNo));
         // 已删除订单
         response.setDeleted(getCount(dateLimit, Constants.ORDER_STATUS_DELETED, type, orderNo));
+        // 线下付款待审核
+        response.setOfflineReview(getCount(dateLimit, Constants.ORDER_STATUS_OFFLINE_REVIEW, type, orderNo));
+        // 线下付款已驳回
+        response.setOfflineRejected(getCount(dateLimit, Constants.ORDER_STATUS_OFFLINE_REJECTED, type, orderNo));
         return response;
     }
 
@@ -2089,6 +2098,21 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
                 queryWrapper.eq("paid", 0);//支付状态
                 queryWrapper.eq("status", 0); //订单状态
                 queryWrapper.eq("is_del", 0);//删除状态
+                queryWrapper.and(i -> i.isNull("offline_pay_status").or().notIn("offline_pay_status", OfflinePayConstants.STATUS_PENDING, OfflinePayConstants.STATUS_REJECTED));
+                break;
+            case Constants.ORDER_STATUS_OFFLINE_REVIEW: //线下付款待审核
+                queryWrapper.eq("paid", 0);
+                queryWrapper.eq("status", 0);
+                queryWrapper.eq("pay_type", Constants.PAY_TYPE_OFFLINE);
+                queryWrapper.eq("offline_pay_status", OfflinePayConstants.STATUS_PENDING);
+                queryWrapper.eq("is_del", 0);
+                break;
+            case Constants.ORDER_STATUS_OFFLINE_REJECTED: //线下付款已驳回
+                queryWrapper.eq("paid", 0);
+                queryWrapper.eq("status", 0);
+                queryWrapper.eq("pay_type", Constants.PAY_TYPE_OFFLINE);
+                queryWrapper.eq("offline_pay_status", OfflinePayConstants.STATUS_REJECTED);
+                queryWrapper.eq("is_del", 0);
                 break;
             case Constants.ORDER_STATUS_NOT_SHIPPED: //未发货
                 queryWrapper.eq("paid", 1);
@@ -2157,6 +2181,21 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
                 queryWrapper.eq("paid", 0);//支付状态
                 queryWrapper.eq("status", 0); //订单状态
                 queryWrapper.eq("is_del", 0);//删除状态
+                queryWrapper.and(i -> i.isNull("offline_pay_status").or().notIn("offline_pay_status", OfflinePayConstants.STATUS_PENDING, OfflinePayConstants.STATUS_REJECTED));
+                break;
+            case Constants.ORDER_STATUS_OFFLINE_REVIEW: //线下付款待审核
+                queryWrapper.eq("paid", 0);
+                queryWrapper.eq("status", 0);
+                queryWrapper.eq("pay_type", Constants.PAY_TYPE_OFFLINE);
+                queryWrapper.eq("offline_pay_status", OfflinePayConstants.STATUS_PENDING);
+                queryWrapper.eq("is_del", 0);
+                break;
+            case Constants.ORDER_STATUS_OFFLINE_REJECTED: //线下付款已驳回
+                queryWrapper.eq("paid", 0);
+                queryWrapper.eq("status", 0);
+                queryWrapper.eq("pay_type", Constants.PAY_TYPE_OFFLINE);
+                queryWrapper.eq("offline_pay_status", OfflinePayConstants.STATUS_REJECTED);
+                queryWrapper.eq("is_del", 0);
                 break;
             case Constants.ORDER_STATUS_NOT_SHIPPED: //未发货
                 queryWrapper.eq("paid", 1);
@@ -2222,6 +2261,24 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
         map.put("key", "");
         map.put("value", "");
         if (null == storeOrder) {
+            return map;
+        }
+        if (!storeOrder.getPaid()
+                && Constants.PAY_TYPE_OFFLINE.equals(storeOrder.getPayType())
+                && OfflinePayUtil.isPending(storeOrder.getOfflinePayStatus())
+                && !storeOrder.getIsDel()
+                && !storeOrder.getIsSystemDel()) {
+            map.put("key", Constants.ORDER_STATUS_OFFLINE_REVIEW);
+            map.put("value", Constants.ORDER_STATUS_STR_OFFLINE_REVIEW);
+            return map;
+        }
+        if (!storeOrder.getPaid()
+                && Constants.PAY_TYPE_OFFLINE.equals(storeOrder.getPayType())
+                && OfflinePayUtil.isRejected(storeOrder.getOfflinePayStatus())
+                && !storeOrder.getIsDel()
+                && !storeOrder.getIsSystemDel()) {
+            map.put("key", Constants.ORDER_STATUS_OFFLINE_REJECTED);
+            map.put("value", Constants.ORDER_STATUS_STR_OFFLINE_REJECTED);
             return map;
         }
         // 未支付
@@ -2337,10 +2394,11 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
                 return Constants.PAY_TYPE_STR_YUE;
             case Constants.PAY_TYPE_ALI_PAY:
                 return Constants.PAY_TYPE_STR_ALI_PAY;
+            case Constants.PAY_TYPE_OFFLINE:
+                return Constants.PAY_TYPE_STR_OFFLINE;
             default:
                 return Constants.PAY_TYPE_STR_OTHER;
         }
     }
 
 }
-

@@ -107,6 +107,18 @@ export function orderMarkApi(params) {
 }
 
 /**
+ * 线下扫码转账审核
+ * @param data
+ */
+export function offlinePayAuditApi(data) {
+  return request({
+    url: '/admin/store/order/offline/audit',
+    method: 'post',
+    data,
+  });
+}
+
+/**
  * 订单 发货
  * @param prams
  */

@@ -86,6 +86,30 @@ public class StoreOrderDetailInfoResponse implements Serializable {
     @ApiModelProperty(value = "支付方式")
     private String payType;
 
+    @ApiModelProperty(value = "线下付款状态：0未提交，1待审核，2已通过，3已驳回")
+    private Integer offlinePayStatus;
+
+    @ApiModelProperty(value = "线下付款状态文本")
+    private String offlinePayStatusText;
+
+    @ApiModelProperty(value = "线下付款凭证")
+    private String offlinePayVoucher;
+
+    @ApiModelProperty(value = "线下付款交易号")
+    private String offlinePayTradeNo;
+
+    @ApiModelProperty(value = "线下付款备注")
+    private String offlinePayRemark;
+
+    @ApiModelProperty(value = "线下付款驳回原因")
+    private String offlinePayRefuseReason;
+
+    @ApiModelProperty(value = "线下付款提交时间")
+    private Date offlinePaySubmitTime;
+
+    @ApiModelProperty(value = "线下付款审核时间")
+    private Date offlinePayAuditTime;
+
     @ApiModelProperty(value = "创建时间")
     private Date createTime;
 

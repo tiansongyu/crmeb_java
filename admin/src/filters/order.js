@@ -59,6 +59,7 @@ export function payTypeFilter(status) {
     weixin: '微信',
     alipay: '支付宝',
     yue: '余额',
+    offline: '线下支付',
   };
   return statusMap[status] || '-';
 }

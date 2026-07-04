@@ -39,6 +39,7 @@ import com.zbkj.common.request.*;
 import com.zbkj.common.response.*;
 import com.zbkj.common.utils.CrmebUtil;
 import com.zbkj.common.utils.CrmebDateUtil;
+import com.zbkj.common.utils.OfflinePayUtil;
 import com.zbkj.common.utils.RedisUtil;
 import com.zbkj.common.vo.*;
 import com.zbkj.service.delete.OrderUtils;
@@ -436,6 +437,7 @@ public class OrderServiceImpl implements OrderService {
             BeanUtils.copyProperties(storeOrder, infoResponse);
             // 订单状态
             infoResponse.setOrderStatus(getH5OrderStatus(storeOrder));
+            infoResponse.setOfflinePayStatusText(OfflinePayUtil.getStatusText(storeOrder.getOfflinePayStatus()));
             // 活动类型
             infoResponse.setActivityType(getOrderActivityType(storeOrder));
             // 订单详情对象列表
@@ -490,6 +492,16 @@ public class OrderServiceImpl implements OrderService {
      * @param storeOrder 订单对象
      */
     private String getH5OrderStatus(StoreOrder storeOrder) {
+        if (!storeOrder.getPaid()
+                && Constants.PAY_TYPE_OFFLINE.equals(storeOrder.getPayType())
+                && OfflinePayUtil.isPending(storeOrder.getOfflinePayStatus())) {
+            return "付款待审核";
+        }
+        if (!storeOrder.getPaid()
+                && Constants.PAY_TYPE_OFFLINE.equals(storeOrder.getPayType())
+                && OfflinePayUtil.isRejected(storeOrder.getOfflinePayStatus())) {
+            return "付款被驳回";
+        }
         if (!storeOrder.getPaid()) {
             return "待支付";
         }
@@ -564,6 +576,7 @@ public class OrderServiceImpl implements OrderService {
         storeOrderDetailResponse.setStatusPic(orderStatusVo.getStr("statusPic"));
         storeOrderDetailResponse.setOrderStatusMsg(orderStatusVo.getStr("msg"));
         storeOrderDetailResponse.setPayTypeStr(orderStatusVo.getStr("payTypeStr"));
+        storeOrderDetailResponse.setOfflinePayStatusText(OfflinePayUtil.getStatusText(storeOrder.getOfflinePayStatus()));
         BigDecimal proTotalPrice = storeOrderDetailResponse.getPayPrice().add(storeOrderDetailResponse.getCouponPrice()).add(storeOrderDetailResponse.getDeductionPrice()).subtract(storeOrderDetailResponse.getPayPostage());
         storeOrderDetailResponse.setProTotalPrice(proTotalPrice);
         return storeOrderDetailResponse;
@@ -576,7 +589,23 @@ public class OrderServiceImpl implements OrderService {
      */
     private MyRecord getOrderStatusVo(StoreOrder storeOrder) {
         MyRecord record = new MyRecord();
-        if (!storeOrder.getPaid()) {
+        if (!storeOrder.getPaid()
+                && Constants.PAY_TYPE_OFFLINE.equals(storeOrder.getPayType())
+                && OfflinePayUtil.isPending(storeOrder.getOfflinePayStatus())) {
+            record.set("type", 0);
+            record.set("title", "付款待审核");
+            record.set("msg", "付款凭证已提交，等待后台确认");
+        } else if (!storeOrder.getPaid()
+                && Constants.PAY_TYPE_OFFLINE.equals(storeOrder.getPayType())
+                && OfflinePayUtil.isRejected(storeOrder.getOfflinePayStatus())) {
+            record.set("type", 0);
+            record.set("title", "付款被驳回");
+            if (StrUtil.isNotBlank(storeOrder.getOfflinePayRefuseReason())) {
+                record.set("msg", storeOrder.getOfflinePayRefuseReason());
+            } else {
+                record.set("msg", "付款凭证未通过审核，请重新上传");
+            }
+        } else if (!storeOrder.getPaid()) {
             record.set("type", 0);
             record.set("title", "未支付");
             record.set("msg", "订单未支付");
@@ -891,22 +920,21 @@ public class OrderServiceImpl implements OrderService {
         OrderInfoVo orderInfoVo = JSONObject.parseObject(orderVoString, OrderInfoVo.class);
         PreOrderResponse preOrderResponse = new PreOrderResponse();
         preOrderResponse.setOrderInfoVo(orderInfoVo);
-        String payWeixinOpen = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_PAY_WEIXIN_OPEN);
         if (orderInfoVo.getIsVideo()) {
-            // 关闭余额支付和到店自提
+            // 关闭在线支付和到店自提
             preOrderResponse.setYuePayStatus("0");
-            preOrderResponse.setPayWeixinOpen(payWeixinOpen);
+            preOrderResponse.setPayWeixinOpen("0");
             preOrderResponse.setStoreSelfMention("false");
             preOrderResponse.setAliPayStatus("0");
+            fillOfflinePayConfig(preOrderResponse);
             return preOrderResponse;
         }
-        String yuePayStatus = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_YUE_PAY_STATUS);// 1开启 2关闭
         String storeSelfMention = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_KEY_STORE_SELF_MENTION);
-        String aliPayStatus = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_ALI_PAY_STATUS);// 1开启
-        preOrderResponse.setYuePayStatus(yuePayStatus);
-        preOrderResponse.setPayWeixinOpen(payWeixinOpen);
+        preOrderResponse.setYuePayStatus("0");
+        preOrderResponse.setPayWeixinOpen("0");
         preOrderResponse.setStoreSelfMention(storeSelfMention);
-        preOrderResponse.setAliPayStatus(aliPayStatus);
+        preOrderResponse.setAliPayStatus("0");
+        fillOfflinePayConfig(preOrderResponse);
         return preOrderResponse;
     }
 
@@ -1199,15 +1227,31 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public PreOrderResponse getPayConfig() {
         PreOrderResponse preOrderResponse = new PreOrderResponse();
-        String payWeixinOpen = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_PAY_WEIXIN_OPEN);
-        String yuePayStatus = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_YUE_PAY_STATUS);// 1开启 2关闭
         String storeSelfMention = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_KEY_STORE_SELF_MENTION);
-        String aliPayStatus = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_ALI_PAY_STATUS);// 1开启
-        preOrderResponse.setYuePayStatus(yuePayStatus);
-        preOrderResponse.setPayWeixinOpen(payWeixinOpen);
+        preOrderResponse.setYuePayStatus("0");
+        preOrderResponse.setPayWeixinOpen("0");
         preOrderResponse.setStoreSelfMention(storeSelfMention);
-        preOrderResponse.setAliPayStatus(aliPayStatus);
+        preOrderResponse.setAliPayStatus("0");
+        fillOfflinePayConfig(preOrderResponse);
         return preOrderResponse;
+    }
+
+    private void fillOfflinePayConfig(PreOrderResponse response) {
+        response.setOfflinePayStatus(isOfflinePayOpen() ? "1" : "0");
+        response.setOfflinePayQrcode(getConfigValue(OfflinePayConstants.CONFIG_OFFLINE_PAY_QRCODE));
+        response.setOfflinePayName(getConfigValue(OfflinePayConstants.CONFIG_OFFLINE_PAY_NAME));
+        response.setOfflinePayTips(getConfigValue(OfflinePayConstants.CONFIG_OFFLINE_PAY_TIPS));
+    }
+
+    private Boolean isOfflinePayOpen() {
+        String status = systemConfigService.getValueByKey(OfflinePayConstants.CONFIG_OFFLINE_PAY_STATUS);
+        return Constants.CONFIG_FORM_SWITCH_OPEN.equals(status)
+                || "true".equalsIgnoreCase(status);
+    }
+
+    private String getConfigValue(String key) {
+        String value = systemConfigService.getValueByKey(key);
+        return StrUtil.isBlank(value) ? "" : value;
     }
 
     /**

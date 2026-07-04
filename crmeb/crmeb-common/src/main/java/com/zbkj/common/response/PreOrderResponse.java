@@ -47,4 +47,15 @@ public class PreOrderResponse implements Serializable {
     @ApiModelProperty(value = "支付宝支付 1 开启 0 关闭")
     private String aliPayStatus;
 
+    @ApiModelProperty(value = "线下扫码转账支付 1 开启 0 关闭")
+    private String offlinePayStatus;
+
+    @ApiModelProperty(value = "线下扫码转账收款码")
+    private String offlinePayQrcode;
+
+    @ApiModelProperty(value = "线下扫码转账收款名称")
+    private String offlinePayName;
+
+    @ApiModelProperty(value = "线下扫码转账付款提示")
+    private String offlinePayTips;
 }

@@ -36,7 +36,6 @@ public class OrderDetailResponse implements Serializable {
     private StoreOrder storeOrder;
     private List<StoreOrderInfoOldVo> cartInfo;
     private String statusPic;
-    private Integer offlinePayStatus;
 
 
     @ApiModelProperty(value = "订单id")
@@ -50,6 +49,18 @@ public class OrderDetailResponse implements Serializable {
 
     @ApiModelProperty(value = "支付状态")
     private Boolean paid;
+
+    @ApiModelProperty(value = "支付方式")
+    private String payType;
+
+    @ApiModelProperty(value = "线下付款状态：0未提交，1待审核，2已通过，3已驳回")
+    private Integer offlinePayStatus;
+
+    @ApiModelProperty(value = "线下付款状态文本")
+    private String offlinePayStatusText;
+
+    @ApiModelProperty(value = "线下付款驳回原因")
+    private String offlinePayRefuseReason;
 
     @ApiModelProperty(value = "支付时间")
     private Date payTime;

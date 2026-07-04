@@ -44,6 +44,14 @@
           <el-tab-pane name="all" :label="`全部(${orderChartType.all ? orderChartType.all : 0})`" />
           <el-tab-pane name="unPaid" :label="`未支付(${orderChartType.unPaid ? orderChartType.unPaid : 0})`" />
           <el-tab-pane
+            name="offlineReview"
+            :label="`付款待审核(${orderChartType.offlineReview ? orderChartType.offlineReview : 0})`"
+          />
+          <el-tab-pane
+            name="offlineRejected"
+            :label="`付款已驳回(${orderChartType.offlineRejected ? orderChartType.offlineRejected : 0})`"
+          />
+          <el-tab-pane
             name="notShipped"
             :label="`未发货(${orderChartType.notShipped ? orderChartType.notShipped : 0})`"
           />
@@ -121,6 +129,22 @@
             <span>{{ scope.row.payTypeStr }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="线下凭证" min-width="170" v-if="checkedCities.includes('线下凭证')">
+          <template slot-scope="scope">
+            <div v-if="scope.row.payType === 'offline'" class="offline-cell">
+              <el-tag size="mini" :type="offlineStatusType(scope.row.offlinePayStatus)">
+                {{ scope.row.offlinePayStatusText || '-' }}
+              </el-tag>
+              <div v-if="scope.row.offlinePayTradeNo" class="offline-meta">
+                交易号：{{ scope.row.offlinePayTradeNo }}
+              </div>
+              <div v-if="scope.row.offlinePayVoucher" class="demo-image__preview offline-voucher">
+                <el-image :src="scope.row.offlinePayVoucher" :preview-src-list="[scope.row.offlinePayVoucher]" />
+              </div>
+            </div>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="订单状态" min-width="100" v-if="checkedCities.includes('订单状态')">
           <template slot-scope="scope">
             <div>
@@ -159,6 +183,12 @@
           <template slot-scope="scope">
             <template>
               <a @click="onOrderDetails(scope.row.orderId)" v-if="checkPermi(['admin:order:info'])">详情</a>
+              <el-divider direction="vertical"></el-divider>
+            </template>
+            <template v-if="canAuditOfflinePay(scope.row)">
+              <a @click="auditOfflinePay(scope.row, true)">通过</a>
+              <el-divider direction="vertical"></el-divider>
+              <a @click="auditOfflinePay(scope.row, false)">驳回</a>
               <el-divider direction="vertical"></el-divider>
             </template>
             <template
@@ -283,7 +313,7 @@
     </el-dialog>
 
     <!--详情-->
-    <details-from ref="orderDetail" :orderId="orderId" />
+    <details-from ref="orderDetail" :orderId="orderId" @refreshList="refreshAfterOfflineAudit" />
 
     <!-- 发送货 -->
     <order-send
@@ -337,6 +367,7 @@ import {
   updatePriceApi,
   orderLogApi,
   orderMarkApi,
+  offlinePayAuditApi,
   orderDeleteApi,
   orderRefuseApi,
   orderRefundApi,
@@ -424,8 +455,28 @@ export default {
       active: false,
       card_select_show: false,
       checkAll: false,
-      checkedCities: ['订单号', '订单类型', '收货人', '商品信息', '实际支付', '支付方式', '订单状态', '下单时间'],
-      columnData: ['订单号', '订单类型', '收货人', '商品信息', '实际支付', '支付方式', '订单状态', '下单时间'],
+      checkedCities: [
+        '订单号',
+        '订单类型',
+        '收货人',
+        '商品信息',
+        '实际支付',
+        '支付方式',
+        '线下凭证',
+        '订单状态',
+        '下单时间',
+      ],
+      columnData: [
+        '订单号',
+        '订单类型',
+        '收货人',
+        '商品信息',
+        '实际支付',
+        '支付方式',
+        '线下凭证',
+        '订单状态',
+        '下单时间',
+      ],
       isIndeterminate: true,
       expressListNormal: [], //全部物流公司 normal
       expressListElec: [], //全部物流公司 elec
@@ -440,6 +491,51 @@ export default {
   },
   methods: {
     checkPermi,
+    isOfflineOrder(row) {
+      return row && row.payType === 'offline';
+    },
+    canAuditOfflinePay(row) {
+      return this.isOfflineOrder(row) && row.paid === false && row.offlinePayStatus === 1;
+    },
+    offlineStatusType(status) {
+      const statusMap = {
+        1: 'warning',
+        2: 'success',
+        3: 'danger',
+      };
+      return statusMap[status] || 'info';
+    },
+    refreshAfterOfflineAudit() {
+      this.getList();
+      this.getOrderStatusNum();
+    },
+    auditOfflinePay(row, approved) {
+      const submit = (reason = '') => {
+        offlinePayAuditApi({
+          orderNo: row.orderId,
+          approved,
+          reason,
+        }).then(() => {
+          this.$message.success(approved ? '已确认付款' : '已驳回付款凭证');
+          this.refreshAfterOfflineAudit();
+        });
+      };
+      if (approved) {
+        this.$confirm(`确认订单 ${row.orderId} 已收到线下转账？`, '线下付款审核', {
+          confirmButtonText: '确认通过',
+          cancelButtonText: '取消',
+          type: 'warning',
+        }).then(() => submit());
+        return;
+      }
+      this.$prompt('请输入驳回原因', '驳回付款凭证', {
+        confirmButtonText: '确认驳回',
+        cancelButtonText: '取消',
+        inputType: 'textarea',
+        inputValidator: (value) => !!value && value.trim().length > 0,
+        inputErrorMessage: '驳回原因不能为空',
+      }).then(({ value }) => submit(value.trim()));
+    },
     //重置
     handleReset() {
       this.tableFrom.type = 2;
@@ -692,9 +788,10 @@ export default {
           this.tableData.data = res.list || [];
           this.tableData.total = res.total;
           this.listLoading = false;
-          this.checkedCities = this.$cache.local.has('order_stroge')
-            ? this.$cache.local.getJSON('order_stroge')
-            : this.checkedCities;
+          if (this.$cache.local.has('order_stroge')) {
+            const cachedColumns = this.$cache.local.getJSON('order_stroge') || [];
+            this.checkedCities = Array.from(new Set([...cachedColumns, '线下凭证']));
+          }
         })
         .catch(() => {
           this.listLoading = false;
@@ -824,6 +921,21 @@ export default {
   box-sizing: border-box;
   font-size: 12px;
   line-height: 16px;
+}
+
+.offline-cell {
+  line-height: 20px;
+}
+
+.offline-meta {
+  margin-top: 4px;
+  color: #606266;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.offline-voucher {
+  margin-top: 6px;
 }
 
 .flex-column {

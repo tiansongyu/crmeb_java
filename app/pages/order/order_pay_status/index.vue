@@ -2,12 +2,10 @@
 	<view :data-theme="theme">
 		<view class='payment-status'>
 			<!--失败时： 用icon-iconfontguanbi fail替换icon-duihao2 bg-color-->
-			<view class='iconfont icons icon-duihao2 bg_color'
-				v-if="order_pay_info.paid === 1"></view>
-			<view v-if="order_pay_info.paid === 2" class='iconfont icons icon-iconfontguanbi'></view>
-			<!-- 失败时：订单支付失败 -->
-			<view class='status' v-if="order_pay_info.payType != 'offline'">{{status==2 ? '订单取消支付' : errMsg ? '订单支付异常':payResult }}</view>
-			<view class='status' v-else>订单创建成功</view>
+			<view class='iconfont icons icon-duihao2 bg_color' v-if="isSuccess"></view>
+			<view class='iconfont icons icon-iconfontguanbi' v-else-if="isFailed"></view>
+			<view class='iconfont icons icon-yuezhifu1 pending' v-else></view>
+			<view class='status'>{{statusText}}</view>
 			<view class='wrapper'>
 				<view class='item acea-row row-between-wrapper'>
 					<view>订单编号</view>
@@ -27,6 +25,14 @@
 					<view>支付金额</view>
 					<view class='itemCom'>{{order_pay_info.payPrice}}</view>
 				</view>
+				<view class='item acea-row row-between-wrapper' v-if="order_pay_info.payType == 'offline'">
+					<view>付款状态</view>
+					<view class='itemCom'>{{order_pay_info.offlinePayStatusText || '-'}}</view>
+				</view>
+				<view class='item acea-row row-between-wrapper' v-if="isOfflineRejected">
+					<view>驳回原因</view>
+					<view class='itemCom'>{{order_pay_info.offlinePayRefuseReason || '-'}}</view>
+				</view>
 				<!--失败时加上这个  -->
 				<view class='item acea-row row-between-wrapper'
 					v-if="!order_pay_info.paid && order_pay_info.payType != 'offline'">
@@ -35,6 +41,9 @@
 				</view>
 			</view>
 			<!--失败时： 重新购买 -->
+			<view @tap="goOfflinePay" v-if="showOfflinePayButton">
+				<button formType="submit" class='returnBnt bg_color' hover-class='none'>{{isOfflineRejected ? '重新上传凭证' : '上传付款凭证'}}</button>
+			</view>
 			<view @tap="goOrderDetails">
 				<button formType="submit" class='returnBnt bg_color' hover-class='none'>查看订单</button>
 			</view>
@@ -77,7 +86,37 @@
 				theme:app.globalData.theme,
 			};
 		},
-		computed: mapGetters(['isLogin']),
+		computed: {
+			...mapGetters(['isLogin']),
+			isOffline() {
+				return this.order_pay_info.payType === 'offline';
+			},
+			isOfflinePending() {
+				return this.isOffline && !this.order_pay_info.paid && this.order_pay_info.offlinePayStatus === 1;
+			},
+			isOfflineRejected() {
+				return this.isOffline && !this.order_pay_info.paid && this.order_pay_info.offlinePayStatus === 3;
+			},
+			isSuccess() {
+				return this.order_pay_info.paid === 1 || this.order_pay_info.paid === true;
+			},
+			isFailed() {
+				if (this.isOffline) return this.isOfflineRejected;
+				return this.order_pay_info.paid === 2;
+			},
+			statusText() {
+				if (this.isOffline) {
+					if (this.isSuccess) return '支付成功';
+					if (this.isOfflinePending) return '付款待审核';
+					if (this.isOfflineRejected) return '付款凭证被驳回';
+					return '等待扫码转账';
+				}
+				return this.status == 2 ? '订单取消支付' : this.errMsg ? '订单支付异常' : this.payResult;
+			},
+			showOfflinePayButton() {
+				return this.isOffline && !this.isSuccess && !this.isOfflinePending;
+			}
+		},
 		watch: {
 			isLogin: {
 				handler: function(newV, oldV) {
@@ -142,7 +181,17 @@
 						setTimeout(()=>{
 							that.wechatQueryPay();
 						},2000);
-					}else {
+					}else if (res.data.payType === 'offline') {
+						let title = res.data.paid ? '支付成功' : res.data.offlinePayStatus === 1 ? '付款待审核' : '未支付';
+						uni.setNavigationBarTitle({
+							title: title
+						});
+						this.payResult = title;
+						if (res.data.paid) {
+							this.order_pay_info.paid = 1;
+						}
+						uni.hideLoading();
+					} else {
 						uni.setNavigationBarTitle({
 							title: res.data.paid ? '支付成功' : '未支付'
 						});
@@ -198,6 +247,11 @@
 					url: '/pages/order/order_details/index?order_id=' + that.orderId
 				})
 				// #endif
+			},
+			goOfflinePay: function() {
+				uni.navigateTo({
+					url: '/pages/order/order_payment/index?orderNo=' + this.orderId + '&payPrice=' + this.order_pay_info.payPrice
+				});
 			}
 
 		}
@@ -253,6 +307,10 @@
 
 	.payment-status .iconfont.fail {
 		text-shadow: 0px 4px 0px #7a7a7a;
+	}
+	.payment-status .pending {
+		background-color: #fe960f;
+		text-shadow: none;
 	}
 
 	.payment-status .status {

@@ -37,4 +37,16 @@ public class PayConfigResponse implements Serializable {
 
     @ApiModelProperty(value = "用户余额")
     private BigDecimal userBalance;
+
+    @ApiModelProperty(value = "线下扫码转账支付")
+    private Boolean offlinePayStatus;
+
+    @ApiModelProperty(value = "线下扫码转账收款码")
+    private String offlinePayQrcode;
+
+    @ApiModelProperty(value = "线下扫码转账收款名称")
+    private String offlinePayName;
+
+    @ApiModelProperty(value = "线下扫码转账付款提示")
+    private String offlinePayTips;
 }

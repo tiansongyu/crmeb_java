@@ -91,6 +91,14 @@ export function orderPay(data) {
 }
 
 /**
+ * 提交线下扫码转账付款凭证
+ * @param object data
+ */
+export function offlinePayProof(data) {
+	return request.post('pay/offline/proof', data);
+}
+
+/**
  * 订单统计数据
  */
 export function orderData() {

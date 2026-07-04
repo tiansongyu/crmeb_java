@@ -61,9 +61,10 @@
 						</view>
 					</view>
 					<view class='bottom acea-row row-right row-middle'>
-						<view class='bnt cancelBnt' v-if="!item.paid" @click='cancelOrder(index,item.id)'>取消订单</view>
-						<view class='bnt bg-color' v-if="!item.paid" @click='goPay(item.payPrice,item.orderId)'>立即付款</view>
-						<view class='bnt bg-color' v-else-if="item.status== 0 || item.status== 1 || item.status== 3" @click='goOrderDetails(item.orderId)'>查看详情</view>
+						<view class='bnt cancelBnt' v-if="!item.paid && !isOfflinePending(item)" @click='cancelOrder(index,item.id)'>取消订单</view>
+						<view class='bnt cancelBnt' v-if="isOfflinePending(item)" @click='goOrderDetails(item.orderId)'>待审核</view>
+						<view class='bnt bg-color' v-if="showPayButton(item)" @click='goPay(item.payPrice,item.orderId)'>{{isOfflineRejected(item) ? '重新上传' : '立即付款'}}</view>
+						<view class='bnt bg-color' v-else-if="!isOfflinePending(item) && (item.status== 0 || item.status== 1 || item.status== 3)" @click='goOrderDetails(item.orderId)'>查看详情</view>
 						<view class='bnt bg-color' v-else-if="item.status==2" @click='goOrderDetails(item.orderId)'>去评价</view>
 						<view class='bnt cancelBnt' v-if="item.status == 3" @click='delOrder(item.id,index)'>删除订单</view>
 					</view>
@@ -85,7 +86,7 @@
 		<!-- <authorize @onLoadFun="onLoadFun" :isAuto="isAuto" :isShowAuth="isShowAuth" @authColse="authColse"></authorize> -->
 		<!-- #endif -->
 		<home></home>
-		<payment :payMode='payMode' :pay_close="pay_close" @onChangeFun='onChangeFun' :order_id="pay_order_id" :totalPrice='totalPrice'></payment>
+		<payment :pay_close="pay_close" @onChangeFun='onChangeFun' :order_id="pay_order_id" :totalPrice='totalPrice'></payment>
 	</view>
 </template>
 
@@ -125,20 +126,6 @@
 				orderStatus: 0, //订单状态
 				page: 1,
 				limit: 20,
-				payMode: [{
-						name: "微信支付",
-						icon: "icon-weixinzhifu",
-						value: 'weixin',
-						title: '微信快捷支付'
-					},
-					{
-						name: "余额支付",
-						icon: "icon-yuezhifu",
-						value: 'yue',
-						title: '可用余额:',
-						number: 0
-					}
-				], 
 				pay_close: false,
 				pay_order_id: '',
 				totalPrice: '0',
@@ -155,8 +142,6 @@
 				this.$set(this, 'orderList', []);
 				this.getOrderData();
 				this.getOrderList();
-				this.payMode[1].number = this.userInfo.nowMoney;
-				this.$set(this, 'payMode', this.payMode);
 			} else {
 				toLogin();
 			}
@@ -186,6 +171,15 @@
 			 */
 			payClose: function() {
 				this.pay_close = false;
+			},
+			isOfflinePending(item) {
+				return item.payType === 'offline' && item.offlinePayStatus === 1 && !item.paid;
+			},
+			isOfflineRejected(item) {
+				return item.payType === 'offline' && item.offlinePayStatus === 3 && !item.paid;
+			},
+			showPayButton(item) {
+				return !item.paid && !this.isOfflinePending(item);
 			},
 			/**
 			 * 生命周期函数--监听页面加载

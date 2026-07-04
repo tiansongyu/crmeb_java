@@ -155,8 +155,6 @@
 		getCouponsOrderPrice,
 		orderCreate,
 		postOrderComputed,
-		orderPay,
-		wechatQueryPayResult,
 		loadPreOrderApi
 	} from '@/api/order.js';
 	import {
@@ -217,26 +215,13 @@
 				textareaStatus: true,
 				//支付方式
 				cartArr: [{
-						"name": "微信支付",
-						"icon": "icon-weixin2",
-						value: 'weixin',
-						title: '微信快捷支付',
-						// #ifdef APP
-						payStatus: 0,
-						// #endif
-						// #ifndef APP
-						payStatus: 1,
-						// #endif
-					},
-					{
-						"name": "余额支付",
-						"icon": "icon-yuezhifu",
-						value: 'yue',
-						title: '可用余额:',
-						payStatus: 1,
-					}
-				],
-				payType: 'weixin', //支付方式
+					"name": "扫码转账",
+					"icon": "icon-yuezhifu1",
+					value: 'offline',
+					title: '上传付款凭证后等待确认',
+					payStatus: 1,
+				}],
+				payType: 'offline', //支付方式
 				openType: 1, //优惠券打开方式 1=使用
 				active: 0, //支付方式切换
 				coupon: {
@@ -312,15 +297,7 @@
 			}
 		},
 		onLoad(options) {
-			// #ifdef H5
-			this.payChannel = this.$wechat.isWeixin() ? 'public' : 'weixinh5';
-			// #endif
-			// #ifdef MP
-			this.payChannel = 'routine';
-			// #endif
-			// #ifdef APP-PLUS
-			this.payChannel = this.systemPlatform === 'ios' ? 'weixinAppIos' : 'weixinAppAndroid';
-			// #endif
+			this.payChannel = 'offline';
 			// if (!options.cartId) return this.$util.Tips({
 			// 	title: '请选择要购买的商品'
 			// }, {
@@ -369,13 +346,9 @@
 					}
 					this.cartInfo = orderInfoVo.orderDetailList;
 					this.orderProNum = orderInfoVo.orderProNum;
-					this.cartArr[1].title = '可用余额:' + orderInfoVo.userBalance;
-					this.cartArr[1].payStatus = parseInt(res.data.yuePayStatus) === 1 ? 1 : 2;
-					this.cartArr[0].payStatus = parseInt(res.data.payWeixinOpen) === 1 ? 1 : 0;
+					this.cartArr[0].payStatus = res.data.offlinePayStatus === true || res.data.offlinePayStatus === 1 || res.data.offlinePayStatus === '1' ? 1 : 0;
+					this.cartArr[0].title = res.data.offlinePayTips || '上传付款凭证后等待确认';
 					this.getaddressInfo();
-					// #ifdef H5
-					if (this.$wechat.isWeixin()) this.cartArr.pop();
-					// #endif
 					this.store_self_mention = res.data.storeSelfMention == '1' && this
 						.productType ===
 						'normal' ? true : false;
@@ -538,18 +511,7 @@
 				that.active = active;
 				that.animated = true;
 				that.payType = that.cartArr[active].value;
-				// #ifdef H5
-				if (that.payType == 'alipay' && this.$wechat.isWeixin() == true) {
-					that.payChannel = 'public';
-				} else if (that.payType == 'alipay' && this.$wechat.isWeixin() == false) {
-					that.payChannel = 'weixinh5';
-				}
-				// #endif
-				// #ifdef APP-PLUS
-				if (that.payType == 'alipay') {
-					that.payChannel = 'appAliPay';
-				}
-				// #endif
+				that.payChannel = 'offline';
 				//that.computedPrice();
 				setTimeout(function() {
 					that.car();
@@ -612,6 +574,9 @@
 			SubOrder(e) {
 				let that = this,
 					data = {};
+				if (that.cartArr[0].payStatus !== 1) return that.$util.Tips({
+					title: '扫码转账支付暂未开启'
+				});
 				if (!that.addressId && !that.shippingType) return that.$util.Tips({
 					title: '请选择收货地址'
 				});

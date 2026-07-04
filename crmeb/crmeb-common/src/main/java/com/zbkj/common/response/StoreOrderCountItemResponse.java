@@ -60,4 +60,10 @@ public class StoreOrderCountItemResponse implements Serializable {
 
     @ApiModelProperty(value = "已删除")
     private Integer deleted;
+
+    @ApiModelProperty(value = "线下付款待审核")
+    private Integer offlineReview;
+
+    @ApiModelProperty(value = "线下付款已驳回")
+    private Integer offlineRejected;
 }

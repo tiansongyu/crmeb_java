@@ -157,11 +157,21 @@
 					<view class='item acea-row row-between'>
 						<view>支付状态：</view>
 						<view class='conter' v-if="orderInfo.paid">已支付</view>
+						<view class='conter' v-else-if="isOfflinePending">付款待审核</view>
+						<view class='conter' v-else-if="isOfflineRejected">付款被驳回</view>
 						<view class='conter' v-else>未支付</view>
 					</view>
 					<view class='item acea-row row-between'>
 						<view>支付方式：</view>
 						<view class='conter'>{{orderInfo.payTypeStr}}</view>
+					</view>
+					<view class='item acea-row row-between' v-if="orderInfo.payType === 'offline'">
+						<view>付款状态：</view>
+						<view class='conter'>{{orderInfo.offlinePayStatusText || '-'}}</view>
+					</view>
+					<view class='item acea-row row-between' v-if="isOfflineRejected">
+						<view>驳回原因：</view>
+						<view class='conter'>{{orderInfo.offlinePayRefuseReason || '-'}}</view>
 					</view>
 					<view class='item flex justify-between align-center' v-if="orderInfo.mark && orderInfo.mark.length <= 15">
 						<view>买家留言：</view>
@@ -260,10 +270,11 @@
 				</view>
 				<view style='height:120rpx;'></view>
 				<view class='footer acea-row row-right row-middle' v-if="isGoodsReturn==false">
-					<view class="qs-btn" v-if="!orderInfo.paid" @click.stop="cancelOrder">取消订单</view>
-					<view class='bnt bg_color' v-if="!orderInfo.paid" @tap='pay_open(orderInfo.orderId,orderInfo.payPrice)'>立即付款</view>
+					<view class="qs-btn" v-if="!orderInfo.paid && !isOfflinePending" @click.stop="cancelOrder">取消订单</view>
+					<view class='bnt cancel' v-if="isOfflinePending">付款待审核</view>
+					<view class='bnt bg_color' v-if="showPayButton" @tap='pay_open(orderInfo.orderId,orderInfo.payPrice)'>{{isOfflineRejected ? '重新上传凭证' : '立即付款'}}</view>
 					<navigator hover-class="none" :url="'/pages/goods/goods_return/index?orderId='+orderInfo.orderId"
-						class='bnt cancel' v-else-if="orderInfo.paid === true && orderInfo.refundStatus === 0 && orderInfo.type!==1">申请退款
+						class='bnt cancel' v-if="orderInfo.paid === true && orderInfo.refundStatus === 0 && orderInfo.type!==1">申请退款
 					</navigator>
 					<view class='bnt bg_color' v-if="orderInfo.combinationId > 0&&orderInfo.paid" @tap='goJoinPink'>查看拼团</view>
 					<navigator class='bnt cancel' v-if="orderInfo.deliveryType == 'express' && orderInfo.status >0"
@@ -320,21 +331,12 @@
 				status: {}, //订单底部按钮状态
 				isClose: false,
 				payMode: [{
-						name: "微信支付",
-						icon: "icon-weixinzhifu",
-						value: 'weixin',
-						title: '微信快捷支付',
-						payStatus: 1,
-					},
-					{
-						name: "余额支付",
-						icon: "icon-yuezhifu",
-						value: 'yue',
-						title: '可用余额:',
-						number: 0,
-						payStatus: 1,
-					}
-				],
+					name: "扫码转账",
+					icon: "icon-yuezhifu1",
+					value: 'offline',
+					title: '上传付款凭证后等待确认',
+					payStatus: 1,
+				}],
 				pay_close: false,
 				pay_order_id: '',
 				totalPrice: '0',
@@ -355,7 +357,18 @@
 				} //客服配置
 			};
 		},
-		computed: mapGetters(['isLogin', 'chatUrl', 'userInfo']),
+		computed: {
+			...mapGetters(['isLogin', 'chatUrl', 'userInfo']),
+			isOfflinePending() {
+				return this.orderInfo.payType === 'offline' && this.orderInfo.offlinePayStatus === 1 && !this.orderInfo.paid;
+			},
+			isOfflineRejected() {
+				return this.orderInfo.payType === 'offline' && this.orderInfo.offlinePayStatus === 3 && !this.orderInfo.paid;
+			},
+			showPayButton() {
+				return !this.orderInfo.paid && !this.isOfflinePending;
+			}
+		},
 		onLoad: function(options) {
 			options.type == undefined || options.type == null ? this.type = 'normal' : this.type = options.type;
 			if (!options.order_id && !options.uniId) return this.$util.Tips({
@@ -376,7 +389,6 @@
 		onShow() {
 			if (this.isLogin) {
 				this.getOrderInfo();
-				this.payMode[1].number = this.userInfo.nowMoney;
 				this.$set(this, 'payMode', this.payMode);
 			} else {
 				toLogin();
@@ -399,9 +411,6 @@
 			 
 		},
 		mounted() {
-			// #ifdef H5
-			if(this.$wechat.isWeixin()) this.payMode.pop();
-			// #endif
 		},
 		methods: {
 			wxChatService(){

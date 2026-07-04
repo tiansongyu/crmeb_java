@@ -381,6 +381,8 @@ public class Constants {
     public static final String ORDER_STATUS_REFUNDING = "refunding"; //退款中
     public static final String ORDER_STATUS_REFUNDED = "refunded"; //已退款
     public static final String ORDER_STATUS_DELETED = "deleted"; //已删除
+    public static final String ORDER_STATUS_OFFLINE_REVIEW = "offlineReview"; //线下付款待审核
+    public static final String ORDER_STATUS_OFFLINE_REJECTED = "offlineRejected"; //线下付款已驳回
 
     public static final String ORDER_STATUS_STR_UNPAID = "未支付"; //未支付
     public static final String ORDER_STATUS_STR_NOT_SHIPPED = "未发货"; //未发货
@@ -393,6 +395,8 @@ public class Constants {
     public static final String ORDER_STATUS_STR_REFUNDING = "退款中"; //退款中
     public static final String ORDER_STATUS_STR_REFUNDED = "已退款"; //已退款
     public static final String ORDER_STATUS_STR_DELETED = "已删除"; //已删除
+    public static final String ORDER_STATUS_STR_OFFLINE_REVIEW = "线下付款待审核"; //线下付款待审核
+    public static final String ORDER_STATUS_STR_OFFLINE_REJECTED = "线下付款已驳回"; //线下付款已驳回
 
     // H5 端订单状态
     public static final int ORDER_STATUS_H5_UNPAID = 0; // 未支付
@@ -461,6 +465,7 @@ public class Constants {
     public static final String ORDER_LOG_DELIVERY_VI = "delivery_fictitious"; //虚拟发货
     public static final String ORDER_LOG_EDIT = "order_edit"; //编辑订单
     public static final String ORDER_LOG_PAY_OFFLINE = "offline"; //线下付款订单
+    public static final String ORDER_LOG_OFFLINE_PAY_REJECT = "offline_pay_reject"; //线下付款驳回
 
 
     // 订单缓存

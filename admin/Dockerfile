@@ -2,7 +2,8 @@ FROM node:14-bullseye AS build
 
 WORKDIR /workspace
 COPY package*.json ./
-RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
+RUN npm install -g npm@9.9.4 \
+    && if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
 COPY . .
 RUN npm run build:prod
 

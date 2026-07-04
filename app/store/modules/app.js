@@ -28,21 +28,15 @@ import {
 	USER_INFO
 } from '../../config/cache';
 let cartArr = [{
-		name: "微信支付",
-		icon: "icon-weixinzhifu1",
-		value: 'weixin',
-		title: '微信快捷支付',
-		payStatus: 1,
-	},
-	{
-		name: "余额支付",
-		icon: "icon-yuezhifu",
-		value: 'yue',
-		title: '可用余额:',
-		payStatus: 1,
-		userBalance: ''
-	}
-];
+	name: "扫码转账",
+	icon: "icon-yuezhifu1",
+	value: 'offline',
+	title: '上传付款凭证后等待确认',
+	payStatus: 1,
+	offlinePayQrcode: '',
+	offlinePayName: '',
+	offlinePayTips: ''
+}];
 const state = {
 	token: Cache.get(LOGIN_STATUS) || '',
 	backgroundColor: "#fff",
@@ -137,19 +131,10 @@ const actions = {
 		return new Promise(reslove => {
 			getOrderPayConfig().then(res => {
 				let data = res.data;
-				cartArr[0].payStatus = data.payWechatOpen ? 1 : 0;
-				cartArr[1].payStatus = data.yuePayStatus ? 1 : 0;
-				cartArr[1].userBalance = data.userBalance ? data.userBalance : 0;
-				// #ifdef H5
-				// if (Auth.isWeixin()) {
-				// 	cartArr[2].payStatus = 0;
-				// } else {
-				// 	cartArr[2].payStatus = data.aliPayStatus ? 1 : 0;
-				// }
-				// #endif
-				// #ifdef APP-PLUS
-				// cartArr[2].payStatus = data.aliPayStatus ? 1 : 0;
-				// #endif
+				cartArr[0].payStatus = data.offlinePayStatus ? 1 : 0;
+				cartArr[0].offlinePayQrcode = data.offlinePayQrcode || '';
+				cartArr[0].offlinePayName = data.offlinePayName || '';
+				cartArr[0].offlinePayTips = data.offlinePayTips || '';
 				let cartArrs = cartArr.filter(e => e.payStatus === 1);
 				reslove({
 					userBalance: data.userBalance,

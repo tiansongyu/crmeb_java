@@ -40,4 +40,19 @@ public class OrderPayResultResponse {
     @ApiModelProperty(value = "订单编号")
     private String orderNo;
 
+    @ApiModelProperty(value = "线下扫码转账状态")
+    private Integer offlinePayStatus;
+
+    @ApiModelProperty(value = "线下扫码转账状态文本")
+    private String offlinePayStatusText;
+
+    @ApiModelProperty(value = "线下扫码转账收款码")
+    private String offlinePayQrcode;
+
+    @ApiModelProperty(value = "线下扫码转账收款名称")
+    private String offlinePayName;
+
+    @ApiModelProperty(value = "线下扫码转账付款提示")
+    private String offlinePayTips;
+
 }

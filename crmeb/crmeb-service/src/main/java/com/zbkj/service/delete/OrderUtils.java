@@ -2,6 +2,7 @@ package com.zbkj.service.delete;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zbkj.common.constants.Constants;
+import com.zbkj.common.constants.OfflinePayConstants;
 import com.zbkj.common.constants.PayConstants;
 import com.zbkj.common.constants.SysConfigConstants;
 import com.zbkj.common.exception.CrmebException;
@@ -75,6 +76,9 @@ public class OrderUtils {
                 break;
             case PayConstants.PAY_TYPE_ALI_PAY:
                 result = (systemConfigService.getValueByKey(SysConfigConstants.CONFIG_ALI_PAY_STATUS).equals("1"));
+                break;
+            case PayConstants.PAY_TYPE_OFFLINE:
+                result = systemConfigService.getValueByKey(OfflinePayConstants.CONFIG_OFFLINE_PAY_STATUS).equals("1");
                 break;
         }
         return result;

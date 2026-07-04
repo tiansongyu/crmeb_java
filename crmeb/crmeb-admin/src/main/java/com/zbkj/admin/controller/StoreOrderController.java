@@ -8,6 +8,7 @@ import com.zbkj.common.vo.ExpressSheetVo;
 import com.zbkj.common.vo.LogisticsResultVo;
 import com.zbkj.service.service.StoreOrderService;
 import com.zbkj.service.service.StoreOrderVerification;
+import com.zbkj.service.service.OrderPayService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
@@ -44,6 +45,9 @@ public class StoreOrderController {
 
     @Autowired
     private StoreOrderVerification storeOrderVerification;
+
+    @Autowired
+    private OrderPayService orderPayService;
 
     /**
      * 分页显示订单表
@@ -131,6 +135,18 @@ public class StoreOrderController {
     @RequestMapping(value = "/info", method = RequestMethod.GET)
     public CommonResult<StoreOrderInfoResponse> info(@RequestParam(value = "orderNo") String orderNo) {
         return CommonResult.success(storeOrderService.info(orderNo));
+    }
+
+    /**
+     * 线下扫码转账审核
+     */
+    @ApiOperation(value = "线下扫码转账审核")
+    @RequestMapping(value = "/offline/audit", method = RequestMethod.POST)
+    public CommonResult<String> offlineAudit(@RequestBody @Validated OfflinePayAuditRequest request) {
+        if (orderPayService.auditOfflinePay(request)) {
+            return CommonResult.success();
+        }
+        return CommonResult.failed();
     }
 
     /**
@@ -270,6 +286,5 @@ public class StoreOrderController {
     }
 
 }
-
 
 

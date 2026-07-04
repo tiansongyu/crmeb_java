@@ -1,5 +1,6 @@
 package com.zbkj.front.controller;
 
+import com.zbkj.common.request.OfflinePayProofRequest;
 import com.zbkj.common.request.OrderPayRequest;
 import com.zbkj.common.response.OrderPayResultResponse;
 import com.zbkj.common.response.PayConfigResponse;
@@ -56,6 +57,15 @@ public class PayController {
     public CommonResult<OrderPayResultResponse> payment(@RequestBody @Validated OrderPayRequest orderPayRequest, HttpServletRequest request) {
         String ip = CrmebUtil.getClientIp(request);
         return CommonResult.success(orderPayService.payment(orderPayRequest, ip));
+    }
+
+    /**
+     * 提交线下扫码转账付款凭证
+     */
+    @ApiOperation(value = "提交线下扫码转账付款凭证")
+    @RequestMapping(value = "/offline/proof", method = RequestMethod.POST)
+    public CommonResult<OrderPayResultResponse> submitOfflineProof(@RequestBody @Validated OfflinePayProofRequest request) {
+        return CommonResult.success(orderPayService.submitOfflineProof(request));
     }
 
     /**
