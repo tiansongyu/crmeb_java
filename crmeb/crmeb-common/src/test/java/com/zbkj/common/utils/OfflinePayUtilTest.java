@@ -30,4 +30,14 @@ public class OfflinePayUtilTest {
         assertFalse(OfflinePayUtil.isRejected(OfflinePayConstants.STATUS_PENDING));
         assertFalse(OfflinePayUtil.isRejected(null));
     }
+
+    @Test
+    public void detectsOpenConfigValues() {
+        assertTrue(OfflinePayUtil.isConfigOpen("'1'"));
+        assertTrue(OfflinePayUtil.isConfigOpen("1"));
+        assertTrue(OfflinePayUtil.isConfigOpen("true"));
+        assertFalse(OfflinePayUtil.isConfigOpen("'0'"));
+        assertFalse(OfflinePayUtil.isConfigOpen("0"));
+        assertFalse(OfflinePayUtil.isConfigOpen(null));
+    }
 }

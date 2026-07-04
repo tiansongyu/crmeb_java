@@ -1,5 +1,6 @@
 package com.zbkj.common.utils;
 
+import com.zbkj.common.constants.Constants;
 import com.zbkj.common.constants.OfflinePayConstants;
 
 /**
@@ -30,6 +31,12 @@ public class OfflinePayUtil {
 
     public static Boolean isApproved(Integer status) {
         return OfflinePayConstants.STATUS_APPROVED.equals(status);
+    }
+
+    public static Boolean isConfigOpen(String status) {
+        return Constants.CONFIG_FORM_SWITCH_OPEN.equals(status)
+                || "1".equals(status)
+                || "true".equalsIgnoreCase(status);
     }
 
     private OfflinePayUtil() {

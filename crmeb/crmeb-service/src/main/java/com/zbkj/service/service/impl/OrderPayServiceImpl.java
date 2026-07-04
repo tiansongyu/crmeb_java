@@ -928,8 +928,7 @@ public class OrderPayServiceImpl implements OrderPayService {
 
     private Boolean isOfflinePayOpen() {
         String status = systemConfigService.getValueByKey(OfflinePayConstants.CONFIG_OFFLINE_PAY_STATUS);
-        return Constants.CONFIG_FORM_SWITCH_OPEN.equals(status)
-                || "true".equalsIgnoreCase(status);
+        return OfflinePayUtil.isConfigOpen(status);
     }
 
     private void fillOfflinePayConfig(PayConfigResponse response) {
