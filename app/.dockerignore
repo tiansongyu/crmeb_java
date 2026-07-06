@@ -1,4 +1,5 @@
 node_modules/
+unpackage/
 .hbuilderx/
 npm-debug.log*
 yarn-debug.log*
