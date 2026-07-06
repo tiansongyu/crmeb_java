@@ -279,6 +279,20 @@ export function productJsonImportApi(data, dryRun = true) {
 }
 
 /**
+ * 商品Excel批量导入
+ * @param data FormData
+ * @param dryRun 是否仅校验
+ */
+export function productImportExcelApi(data, dryRun = true) {
+  return request({
+    url: `/admin/store/product/import/excel`,
+    method: 'post',
+    params: { dryRun },
+    data,
+  });
+}
+
+/**
  * 商品复制 一号通
  * @param pram
  */

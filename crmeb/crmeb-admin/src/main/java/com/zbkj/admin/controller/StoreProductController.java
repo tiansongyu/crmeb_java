@@ -103,6 +103,17 @@ public class StoreProductController {
     }
 
     /**
+     * Excel批量导入商品
+     */
+    @PreAuthorize("hasAuthority('admin:product:save')")
+    @ApiOperation(value = "Excel批量导入商品")
+    @RequestMapping(value = "/import/excel", method = RequestMethod.POST)
+    public CommonResult<ProductImportResponse> importExcel(@RequestParam("file") MultipartFile file,
+                                                           @RequestParam(value = "dryRun", required = false, defaultValue = "true") Boolean dryRun) {
+        return CommonResult.success(productImportService.importExcelProducts(file, dryRun));
+    }
+
+    /**
      * 删除商品表
      * @param id Integer
      */
@@ -244,5 +255,4 @@ public class StoreProductController {
     }
 
 }
-
 

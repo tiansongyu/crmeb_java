@@ -21,6 +21,11 @@ import com.zbkj.service.service.CategoryService;
 import com.zbkj.service.service.ProductImportService;
 import com.zbkj.service.service.ShippingTemplatesService;
 import com.zbkj.service.service.StoreProductService;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,6 +35,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -61,13 +67,36 @@ public class ProductImportServiceImpl implements ProductImportService {
         List<ProductImportItemRequest> products = request.getProducts();
         validateProductCount(products);
 
+        List<ExcelProductGroup> groups = new ArrayList<>();
+        for (int i = 0; i < products.size(); i++) {
+            ExcelProductGroup group = new ExcelProductGroup();
+            group.row = i + 1;
+            group.item = products.get(i);
+            groups.add(group);
+        }
+        return importGroups(groups, validateOnly);
+    }
+
+    @Override
+    public ProductImportResponse importExcelProducts(MultipartFile file, Boolean dryRun) {
+        boolean validateOnly = !Boolean.FALSE.equals(dryRun);
+        List<ExcelProductGroup> groups = parseExcelFile(file);
+        validateProductCountFromGroups(groups);
+        return importGroups(groups, validateOnly);
+    }
+
+    private ProductImportResponse importGroups(List<ExcelProductGroup> groups, boolean validateOnly) {
         ProductImportResponse response = new ProductImportResponse();
-        response.setTotal(products.size());
+        response.setTotal(groups.size());
         response.setDryRun(validateOnly);
 
-        for (int i = 0; i < products.size(); i++) {
-            ProductImportItemRequest item = products.get(i);
-            ProductImportItemResponse itemResponse = importOne(i + 1, item, validateOnly);
+        for (ExcelProductGroup group : groups) {
+            ProductImportItemResponse itemResponse;
+            if (StrUtil.isNotBlank(group.error)) {
+                itemResponse = failedItem(group);
+            } else {
+                itemResponse = importOne(group.row, group.item, validateOnly);
+            }
             response.getItems().add(itemResponse);
             if (Boolean.TRUE.equals(itemResponse.getSuccess())) {
                 response.setSuccess(response.getSuccess() + 1);
@@ -75,6 +104,15 @@ public class ProductImportServiceImpl implements ProductImportService {
                 response.setFailed(response.getFailed() + 1);
             }
         }
+        return response;
+    }
+
+    private ProductImportItemResponse failedItem(ExcelProductGroup group) {
+        ProductImportItemResponse response = new ProductImportItemResponse();
+        response.setRow(group.row);
+        response.setStoreName(group.item == null ? "" : group.item.getStoreName());
+        response.setSuccess(false);
+        response.setMessage(group.error);
         return response;
     }
 
@@ -123,11 +161,212 @@ public class ProductImportServiceImpl implements ProductImportService {
         }
     }
 
+    private List<ExcelProductGroup> parseExcelFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new CrmebException("请上传Excel文件");
+        }
+        Workbook workbook = null;
+        try {
+            workbook = WorkbookFactory.create(file.getInputStream());
+            if (workbook.getNumberOfSheets() < 1) {
+                throw new CrmebException("Excel文件没有工作表");
+            }
+            Sheet sheet = workbook.getSheetAt(0);
+            if (sheet == null || sheet.getLastRowNum() < 1) {
+                throw new CrmebException("Excel商品列表不能为空");
+            }
+            DataFormatter formatter = new DataFormatter();
+            Map<String, Integer> headerMap = readHeaders(sheet.getRow(0), formatter);
+            requireHeader(headerMap, "商品编码");
+            requireHeader(headerMap, "商品名称");
+            requireHeader(headerMap, "分类");
+            requireHeader(headerMap, "主图");
+            requireHeader(headerMap, "轮播图");
+            requireHeader(headerMap, "售价");
+            requireHeader(headerMap, "原价");
+            requireHeader(headerMap, "成本价");
+            requireHeader(headerMap, "库存");
+
+            Map<String, ExcelProductGroup> groupsByCode = new LinkedHashMap<>();
+            List<ExcelProductGroup> groups = new ArrayList<>();
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (isBlankRow(row, formatter)) {
+                    continue;
+                }
+                ExcelProductGroup group = readExcelRow(row, i + 1, headerMap, formatter, groupsByCode);
+                if (!groupsByCode.containsKey(group.productCode)) {
+                    groups.add(group);
+                    if (StrUtil.isNotBlank(group.productCode)) {
+                        groupsByCode.put(group.productCode, group);
+                    }
+                }
+            }
+            return groups;
+        } catch (CrmebException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CrmebException("读取Excel文件失败");
+        } finally {
+            if (workbook != null) {
+                try {
+                    workbook.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+    }
+
+    private ExcelProductGroup readExcelRow(Row row, int rowNumber, Map<String, Integer> headerMap,
+                                           DataFormatter formatter, Map<String, ExcelProductGroup> groupsByCode) {
+        String productCode = cell(row, headerMap, formatter, "商品编码");
+        if (StrUtil.isBlank(productCode)) {
+            ExcelProductGroup group = new ExcelProductGroup();
+            group.row = rowNumber;
+            group.item = new ProductImportItemRequest();
+            group.item.setStoreName(cell(row, headerMap, formatter, "商品名称"));
+            group.error = "商品编码不能为空";
+            return group;
+        }
+
+        ExcelProductGroup group = groupsByCode.get(productCode.trim());
+        if (group == null) {
+            group = new ExcelProductGroup();
+            group.row = rowNumber;
+            group.productCode = productCode.trim();
+        }
+        try {
+            if (group.item == null) {
+                group.item = buildExcelProductItem(row, headerMap, formatter);
+            }
+            group.item.getSkus().add(buildExcelSku(row, rowNumber, headerMap, formatter));
+        } catch (CrmebException e) {
+            if (group.item == null) {
+                group.item = new ProductImportItemRequest();
+                group.item.setStoreName(cell(row, headerMap, formatter, "商品名称"));
+            }
+            group.error = e.getMessage();
+        }
+        return group;
+    }
+
+    private ProductImportItemRequest buildExcelProductItem(Row row, Map<String, Integer> headerMap,
+                                                           DataFormatter formatter) {
+        ProductImportItemRequest item = new ProductImportItemRequest();
+        item.setCategoryId(parseInteger(cell(row, headerMap, formatter, "分类ID"), "分类ID必须是整数"));
+        item.setCategoryName(cell(row, headerMap, formatter, "分类", "分类名称", "商品分类"));
+        item.setTempId(parseInteger(cell(row, headerMap, formatter, "运费模板ID"), "运费模板ID必须是整数"));
+        item.setStoreName(cell(row, headerMap, formatter, "商品名称"));
+        item.setKeyword(defaultText(cell(row, headerMap, formatter, "关键字"), item.getStoreName()));
+        item.setUnitName(defaultText(cell(row, headerMap, formatter, "单位"), "件"));
+        item.setImage(cell(row, headerMap, formatter, "主图"));
+        item.setSliderImages(splitList(cell(row, headerMap, formatter, "轮播图")));
+        item.setContent(cell(row, headerMap, formatter, "详情", "商品详情"));
+        item.setSort(parseInteger(cell(row, headerMap, formatter, "排序"), "排序必须是整数"));
+        item.setIsHot(parseBoolean(cell(row, headerMap, formatter, "热卖")));
+        item.setIsBenefit(parseBoolean(cell(row, headerMap, formatter, "优惠")));
+        item.setIsBest(parseBoolean(cell(row, headerMap, formatter, "精品")));
+        item.setIsNew(parseBoolean(cell(row, headerMap, formatter, "新品")));
+        item.setIsGood(parseBoolean(cell(row, headerMap, formatter, "优品推荐")));
+        item.setGiveIntegral(parseInteger(cell(row, headerMap, formatter, "赠送积分"), "赠送积分必须是整数"));
+        item.setFicti(parseInteger(cell(row, headerMap, formatter, "虚拟销量"), "虚拟销量必须是整数"));
+        item.setSkus(new ArrayList<>());
+        return item;
+    }
+
+    private ProductImportSkuRequest buildExcelSku(Row row, int rowNumber, Map<String, Integer> headerMap,
+                                                  DataFormatter formatter) {
+        ProductImportSkuRequest sku = new ProductImportSkuRequest();
+        LinkedHashMap<String, String> specs = new LinkedHashMap<>();
+        addSpec(specs, row, rowNumber, headerMap, formatter, 1);
+        addSpec(specs, row, rowNumber, headerMap, formatter, 2);
+        addSpec(specs, row, rowNumber, headerMap, formatter, 3);
+        sku.setSpecs(specs);
+        sku.setPrice(parseBigDecimal(cell(row, headerMap, formatter, "售价"), "第" + rowNumber + "行售价必须是数字"));
+        sku.setOtPrice(parseBigDecimal(cell(row, headerMap, formatter, "原价"), "第" + rowNumber + "行原价必须是数字"));
+        sku.setCost(parseBigDecimal(cell(row, headerMap, formatter, "成本价"), "第" + rowNumber + "行成本价必须是数字"));
+        sku.setStock(parseInteger(cell(row, headerMap, formatter, "库存"), "第" + rowNumber + "行库存必须是整数"));
+        sku.setWeight(parseBigDecimal(cell(row, headerMap, formatter, "重量"), "第" + rowNumber + "行重量必须是数字"));
+        sku.setVolume(parseBigDecimal(cell(row, headerMap, formatter, "体积"), "第" + rowNumber + "行体积必须是数字"));
+        sku.setImage(cell(row, headerMap, formatter, "SKU图", "规格图"));
+        sku.setBarCode(cell(row, headerMap, formatter, "商品条码", "条码"));
+        sku.setBrokerage(parseBigDecimal(cell(row, headerMap, formatter, "一级返佣"), "第" + rowNumber + "行一级返佣必须是数字"));
+        sku.setBrokerageTwo(parseBigDecimal(cell(row, headerMap, formatter, "二级返佣"), "第" + rowNumber + "行二级返佣必须是数字"));
+        return sku;
+    }
+
+    private void addSpec(LinkedHashMap<String, String> specs, Row row, int rowNumber, Map<String, Integer> headerMap,
+                         DataFormatter formatter, int index) {
+        String name = cell(row, headerMap, formatter, "规格" + index + "名");
+        String value = cell(row, headerMap, formatter, "规格" + index + "值");
+        if (StrUtil.isBlank(name) && StrUtil.isBlank(value)) {
+            return;
+        }
+        if (StrUtil.isBlank(name)) {
+            throw new CrmebException("第" + rowNumber + "行规格" + index + "名不能为空");
+        }
+        if (StrUtil.isBlank(value)) {
+            throw new CrmebException("第" + rowNumber + "行规格" + index + "值不能为空");
+        }
+        specs.put(name.trim(), value.trim());
+    }
+
+    private Map<String, Integer> readHeaders(Row row, DataFormatter formatter) {
+        if (row == null) {
+            throw new CrmebException("Excel表头不能为空");
+        }
+        Map<String, Integer> headerMap = new HashMap<>();
+        for (int i = 0; i < row.getLastCellNum(); i++) {
+            String header = formatter.formatCellValue(row.getCell(i));
+            if (StrUtil.isNotBlank(header)) {
+                headerMap.put(header.trim(), i);
+            }
+        }
+        return headerMap;
+    }
+
+    private void requireHeader(Map<String, Integer> headerMap, String header) {
+        if (!headerMap.containsKey(header)) {
+            throw new CrmebException("Excel缺少必填列：" + header);
+        }
+    }
+
+    private boolean isBlankRow(Row row, DataFormatter formatter) {
+        if (row == null) {
+            return true;
+        }
+        for (int i = 0; i < row.getLastCellNum(); i++) {
+            if (StrUtil.isNotBlank(formatter.formatCellValue(row.getCell(i)))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private String cell(Row row, Map<String, Integer> headerMap, DataFormatter formatter, String... names) {
+        for (String name : names) {
+            Integer index = headerMap.get(name);
+            if (index != null) {
+                return formatter.formatCellValue(row.getCell(index)).trim();
+            }
+        }
+        return "";
+    }
+
     private void validateProductCount(List<ProductImportItemRequest> products) {
         if (CollUtil.isEmpty(products)) {
             throw new CrmebException("商品列表不能为空");
         }
         if (products.size() > MAX_PRODUCTS_PER_FILE) {
+            throw new CrmebException("单次最多导入" + MAX_PRODUCTS_PER_FILE + "个商品");
+        }
+    }
+
+    private void validateProductCountFromGroups(List<ExcelProductGroup> groups) {
+        if (CollUtil.isEmpty(groups)) {
+            throw new CrmebException("商品列表不能为空");
+        }
+        if (groups.size() > MAX_PRODUCTS_PER_FILE) {
             throw new CrmebException("单次最多导入" + MAX_PRODUCTS_PER_FILE + "个商品");
         }
     }
@@ -374,10 +613,68 @@ public class ProductImportServiceImpl implements ProductImportService {
         return value == null ? BigDecimal.ZERO : value;
     }
 
+    private String defaultText(String value, String defaultValue) {
+        return StrUtil.isBlank(value) ? defaultValue : value.trim();
+    }
+
+    private List<String> splitList(String value) {
+        List<String> list = new ArrayList<>();
+        if (StrUtil.isBlank(value)) {
+            return list;
+        }
+        for (String item : value.split("[,，;；\\n\\r]+")) {
+            if (StrUtil.isNotBlank(item)) {
+                list.add(item.trim());
+            }
+        }
+        return list;
+    }
+
+    private Integer parseInteger(String value, String message) {
+        if (StrUtil.isBlank(value)) {
+            return null;
+        }
+        try {
+            return new BigDecimal(value.trim()).intValueExact();
+        } catch (Exception e) {
+            throw new CrmebException(message);
+        }
+    }
+
+    private BigDecimal parseBigDecimal(String value, String message) {
+        if (StrUtil.isBlank(value)) {
+            return null;
+        }
+        try {
+            return new BigDecimal(value.trim());
+        } catch (Exception e) {
+            throw new CrmebException(message);
+        }
+    }
+
+    private Boolean parseBoolean(String value) {
+        if (StrUtil.isBlank(value)) {
+            return null;
+        }
+        String normalized = value.trim().toLowerCase();
+        return "1".equals(normalized)
+                || "true".equals(normalized)
+                || "yes".equals(normalized)
+                || "y".equals(normalized)
+                || "是".equals(normalized);
+    }
+
     private String normalizeMessage(Exception e) {
         if (e instanceof CrmebException) {
             return e.getMessage();
         }
         return e.getMessage() == null ? "导入失败" : e.getMessage();
+    }
+
+    private static class ExcelProductGroup {
+        private int row;
+        private String productCode;
+        private ProductImportItemRequest item;
+        private String error;
     }
 }

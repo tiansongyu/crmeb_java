@@ -193,7 +193,7 @@
       <tao-bao v-if="dialogVisible" @handleCloseMod="handleCloseMod"></tao-bao>
     </el-dialog>
     <el-dialog
-      title="JSON批量导入商品"
+      title="Excel批量导入商品"
       :visible.sync="importDialogVisible"
       :close-on-click-modal="false"
       width="780px"
@@ -209,13 +209,13 @@
         action="#"
         :auto-upload="false"
         :limit="1"
-        accept=".json,application/json"
+        accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         :file-list="importFileList"
         :on-change="handleImportFileChange"
         :on-remove="handleImportFileRemove"
         :on-exceed="handleImportFileExceed"
       >
-        <el-button size="small" type="primary">选择JSON文件</el-button>
+        <el-button size="small" type="primary">选择Excel文件</el-button>
       </el-upload>
       <el-table
         v-if="importResult"
@@ -237,7 +237,7 @@
         <el-table-column prop="message" label="说明" min-width="220" :show-overflow-tooltip="true" />
       </el-table>
       <div v-if="importResult" class="importSummary">
-        共 {{ importResult.total }} 条，成功 {{ importResult.success }} 条，失败 {{ importResult.failed }} 条
+        共 {{ importResult.total }} 个商品，成功 {{ importResult.success }} 个，失败 {{ importResult.failed }} 个
       </div>
       <span slot="footer" class="dialog-footer">
         <el-button @click="importDialogVisible = false">关闭</el-button>
@@ -272,12 +272,13 @@ import {
   productExportApi,
   restoreApi,
   productExcelApi,
-  productJsonImportApi,
+  productImportExcelApi,
 } from '@/api/store';
 import { getToken } from '@/utils/auth';
 import storeEdit from './components/storeEdit';
 import { checkPermi } from '@/utils/permission'; // 权限判断函数
 import { Debounce } from '@/utils/validate.js';
+import XLSX from 'xlsx';
 export default {
   name: 'ProductList',
   components: { storeEdit },
@@ -320,31 +321,116 @@ export default {
       importFileList: [],
       importLoading: false,
       importResult: null,
-      importTemplate: {
-        products: [
-          {
-            storeName: '模板商品A',
-            categoryName: '模板分类一',
-            keyword: '模板商品',
-            unitName: '件',
-            image: 'crmebimage/public/product/demo-a.jpg',
-            sliderImages: ['crmebimage/public/product/demo-a.jpg'],
-            content: '<p>商品详情</p>',
-            skus: [
-              {
-                specs: { 规格: '默认' },
-                price: 99,
-                otPrice: 129,
-                cost: 50,
-                stock: 100,
-                weight: 0,
-                volume: 0,
-                image: 'crmebimage/public/product/demo-a.jpg',
-              },
-            ],
-          },
+      importTemplateHeaders: [
+        '商品编码',
+        '商品名称',
+        '分类',
+        '分类ID',
+        '关键字',
+        '单位',
+        '主图',
+        '轮播图',
+        '详情',
+        '规格1名',
+        '规格1值',
+        '规格2名',
+        '规格2值',
+        '规格3名',
+        '规格3值',
+        '售价',
+        '原价',
+        '成本价',
+        '库存',
+        '重量',
+        '体积',
+        'SKU图',
+        '商品条码',
+        '运费模板ID',
+        '排序',
+        '虚拟销量',
+        '热卖',
+        '优惠',
+        '精品',
+        '新品',
+        '优品推荐',
+        '赠送积分',
+        '一级返佣',
+        '二级返佣',
+      ],
+      importTemplateRows: [
+        [
+          'TEMPLATE001',
+          '模板商品A',
+          '模板分类一',
+          '',
+          '模板商品',
+          '件',
+          'crmebimage/public/product/demo-a.jpg',
+          'crmebimage/public/product/demo-a.jpg,crmebimage/public/product/demo-a-side.jpg',
+          '<p>商品详情</p>',
+          '颜色',
+          '白色',
+          '尺寸',
+          '标准',
+          '',
+          '',
+          99,
+          129,
+          50,
+          100,
+          0,
+          0,
+          'crmebimage/public/product/demo-a-white.jpg',
+          'TEMPLATE001-WHITE',
+          '',
+          0,
+          0,
+          '否',
+          '否',
+          '否',
+          '否',
+          '否',
+          0,
+          0,
+          0,
         ],
-      },
+        [
+          'TEMPLATE001',
+          '模板商品A',
+          '模板分类一',
+          '',
+          '模板商品',
+          '件',
+          'crmebimage/public/product/demo-a.jpg',
+          'crmebimage/public/product/demo-a.jpg,crmebimage/public/product/demo-a-side.jpg',
+          '<p>商品详情</p>',
+          '颜色',
+          '黑色',
+          '尺寸',
+          '标准',
+          '',
+          '',
+          109,
+          139,
+          55,
+          80,
+          0,
+          0,
+          'crmebimage/public/product/demo-a-black.jpg',
+          'TEMPLATE001-BLACK',
+          '',
+          0,
+          0,
+          '否',
+          '否',
+          '否',
+          '否',
+          '否',
+          0,
+          0,
+          0,
+        ],
+      ],
     };
   },
   mounted() {
@@ -430,21 +516,28 @@ export default {
       if (this.$refs.productImportUpload) this.$refs.productImportUpload.clearFiles();
     },
     downloadImportTemplate() {
-      const blob = new Blob([JSON.stringify(this.importTemplate, null, 2)], {
-        type: 'application/json;charset=utf-8',
+      const worksheet = XLSX.utils.aoa_to_sheet([this.importTemplateHeaders].concat(this.importTemplateRows));
+      worksheet['!cols'] = this.importTemplateHeaders.map((header) => ({
+        wch: Math.max(String(header).length + 4, 12),
+      }));
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, '商品导入');
+      const output = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([output], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'product-import-template.json';
+      link.download = 'product-import-template.xlsx';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     },
     handleImportFileChange(file, fileList) {
-      if (!/\.json$/i.test(file.name || '')) {
-        this.$message.error('请选择JSON文件');
+      if (!/\.(xlsx|xls)$/i.test(file.name || '')) {
+        this.$message.error('请选择Excel文件');
         this.importFile = null;
         this.importFileList = [];
         if (this.$refs.productImportUpload) this.$refs.productImportUpload.clearFiles();
@@ -460,7 +553,7 @@ export default {
       this.importResult = null;
     },
     handleImportFileExceed() {
-      this.$message.warning('一次只能选择一个JSON文件');
+      this.$message.warning('一次只能选择一个Excel文件');
     },
     validateProductImport() {
       this.runProductImport(true);
@@ -470,20 +563,20 @@ export default {
     },
     runProductImport(dryRun) {
       if (!this.importFile) {
-        this.$message.warning('请先选择JSON文件');
+        this.$message.warning('请先选择Excel文件');
         return;
       }
       const formData = new FormData();
       formData.append('file', this.importFile);
       this.importLoading = true;
-      productJsonImportApi(formData, dryRun)
+      productImportExcelApi(formData, dryRun)
         .then((res) => {
           this.importResult = res;
           if (dryRun) {
             Number(res.failed) > 0 ? this.$message.warning('校验未通过') : this.$message.success('校验通过');
             return;
           }
-          this.$message.success(`导入完成，成功 ${res.success} 条，失败 ${res.failed} 条`);
+          this.$message.success(`导入完成，成功 ${res.success} 个商品，失败 ${res.failed} 个`);
           this.getList();
           this.goodHeade();
           this.getCategorySelect();
