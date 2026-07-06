@@ -16,7 +16,7 @@ The template removes or neutralizes business/demo content:
 
 - Products, SKUs, product mappings, product descriptions, product logs, comments, carts, orders, order logs, users, user addresses, user bills, balances, recharge records, brokerage records, visits, and sign records.
 - Group-buying, bargain, seckill, pink-team, coupons, coupon claims, shipping templates, stores, store staff, articles, WeChat replies, material attachments, and previous DIY/demo pages.
-- Public-facing company names, demo store names, external CRMEB/customer-service links, demo screenshots, real-looking phone/address values, and seeded placeholder credentials such as `111111`.
+- Public-facing company names, demo store names, external legacy/customer-service links, demo screenshots, real-looking phone/address values, and seeded placeholder credentials such as `111111`.
 
 ## Template Placeholder Data
 
@@ -50,7 +50,7 @@ Replace runtime-visible project branding with template wording where it affects 
 - Admin/H5 HTML metadata and display titles.
 - Spring Boot banner and default CAPTCHA watermark.
 - `demoSite` flags should be `false` so this is no longer treated as a demo site.
-- Disable startup calls to CRMEB remote upgrade telemetry by default.
+- Disable startup calls to the legacy remote upgrade endpoint by default.
 
 Technical identifiers that are not user-facing stay unchanged unless they directly leak into UI:
 

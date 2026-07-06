@@ -16,10 +16,10 @@ import websocket
 
 BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:8082").rstrip("/")
 API_URL = os.environ.get("API_URL", "http://127.0.0.1:20410").rstrip("/")
-FRONT_ACCOUNT = os.environ.get("FRONT_ACCOUNT", "18292417675")
-FRONT_PASSWORD = os.environ.get("FRONT_PASSWORD", "Crmeb_123456")
-COMBINATION_ID = os.environ.get("COMBINATION_ID", "34")
-TARGET_SKU = os.environ.get("TARGET_SKU", "【2件套 新升级钛金黑胶】防潮垫+幻影驼色帐篷")
+FRONT_ACCOUNT = os.environ.get("FRONT_ACCOUNT")
+FRONT_PASSWORD = os.environ.get("FRONT_PASSWORD")
+COMBINATION_ID = os.environ.get("COMBINATION_ID")
+TARGET_SKU = os.environ.get("TARGET_SKU")
 SCREENSHOT = os.environ.get("SCREENSHOT", "artifacts/combination-sku-popup-smoke.png")
 DETAIL_SCREENSHOT = os.environ.get(
     "DETAIL_SCREENSHOT",
@@ -29,7 +29,7 @@ CONFIRM_SCREENSHOT = os.environ.get(
     "CONFIRM_SCREENSHOT",
     "artifacts/combination-sku-popup-confirm-smoke.png",
 )
-EXPECTED_LIMIT_TEXT = os.environ.get("EXPECTED_LIMIT_TEXT", "限量: 20 件")
+EXPECTED_LIMIT_TEXT = os.environ.get("EXPECTED_LIMIT_TEXT")
 
 
 class Cdp:
@@ -134,9 +134,22 @@ def get_page_websocket(port):
 
 
 def main():
+    missing = [
+        name
+        for name, value in {
+            "FRONT_ACCOUNT": FRONT_ACCOUNT,
+            "FRONT_PASSWORD": FRONT_PASSWORD,
+            "COMBINATION_ID": COMBINATION_ID,
+            "TARGET_SKU": TARGET_SKU,
+            "EXPECTED_LIMIT_TEXT": EXPECTED_LIMIT_TEXT,
+        }.items()
+        if not value
+    ]
+    if missing:
+        raise SystemExit("{} must be set for template-store popup smoke tests".format(", ".join(missing)))
     token = login()
     port = int(os.environ.get("CHROME_PORT", "9340"))
-    profile = tempfile.mkdtemp(prefix="crmeb-popup-smoke-")
+    profile = tempfile.mkdtemp(prefix="template-popup-smoke-")
     chrome = None
     try:
         chrome = subprocess.Popen(

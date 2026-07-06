@@ -46,6 +46,9 @@
         <router-link :to="{ path: '/store/list/creatProduct' }">
           <el-button type="primary" class="mr14" v-hasPermi="['admin:product:save']">添加商品</el-button>
         </router-link>
+        <el-button type="warning" class="mr14" @click="openImportDialog" v-hasPermi="['admin:product:save']">
+          批量导入
+        </el-button>
         <el-button type="success" @click="onCopy" v-hasPermi="['admin:product:save']">商品采集</el-button>
         <el-button @click="exports" v-hasPermi="['admin:export:excel:product']">导出</el-button>
       </div>
@@ -189,6 +192,61 @@
     >
       <tao-bao v-if="dialogVisible" @handleCloseMod="handleCloseMod"></tao-bao>
     </el-dialog>
+    <el-dialog
+      title="JSON批量导入商品"
+      :visible.sync="importDialogVisible"
+      :close-on-click-modal="false"
+      width="780px"
+      class="productImportModal"
+      @close="resetImportDialog"
+    >
+      <div class="importToolbar">
+        <el-button type="primary" plain size="small" @click="downloadImportTemplate">下载模板</el-button>
+        <span class="importHint">先校验，校验通过后再导入。导入后商品默认在仓库中。</span>
+      </div>
+      <el-upload
+        ref="productImportUpload"
+        action="#"
+        :auto-upload="false"
+        :limit="1"
+        accept=".json,application/json"
+        :file-list="importFileList"
+        :on-change="handleImportFileChange"
+        :on-remove="handleImportFileRemove"
+        :on-exceed="handleImportFileExceed"
+      >
+        <el-button size="small" type="primary">选择JSON文件</el-button>
+      </el-upload>
+      <el-table
+        v-if="importResult"
+        :data="importResult.items"
+        size="mini"
+        class="mt14"
+        max-height="300"
+        border
+      >
+        <el-table-column prop="row" label="行" width="60" />
+        <el-table-column prop="storeName" label="商品名称" min-width="180" :show-overflow-tooltip="true" />
+        <el-table-column label="结果" width="90">
+          <template slot-scope="scope">
+            <el-tag size="mini" :type="scope.row.success ? 'success' : 'danger'">
+              {{ scope.row.success ? '成功' : '失败' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="message" label="说明" min-width="220" :show-overflow-tooltip="true" />
+      </el-table>
+      <div v-if="importResult" class="importSummary">
+        共 {{ importResult.total }} 条，成功 {{ importResult.success }} 条，失败 {{ importResult.failed }} 条
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="importDialogVisible = false">关闭</el-button>
+        <el-button :loading="importLoading" :disabled="!importFile" @click="validateProductImport">预览校验</el-button>
+        <el-button type="primary" :loading="importLoading" :disabled="!importCanSubmit" @click="confirmProductImport">
+          确认导入
+        </el-button>
+      </span>
+    </el-dialog>
     <!--编辑库存-->
     <el-drawer
       title="编辑库存"
@@ -214,6 +272,7 @@ import {
   productExportApi,
   restoreApi,
   productExcelApi,
+  productJsonImportApi,
 } from '@/api/store';
 import { getToken } from '@/utils/auth';
 import storeEdit from './components/storeEdit';
@@ -256,6 +315,36 @@ export default {
       isIndeterminate: true,
       drawer: false,
       productId: 0,
+      importDialogVisible: false,
+      importFile: null,
+      importFileList: [],
+      importLoading: false,
+      importResult: null,
+      importTemplate: {
+        products: [
+          {
+            storeName: '模板商品A',
+            categoryName: '模板分类一',
+            keyword: '模板商品',
+            unitName: '件',
+            image: 'crmebimage/public/product/demo-a.jpg',
+            sliderImages: ['crmebimage/public/product/demo-a.jpg'],
+            content: '<p>商品详情</p>',
+            skus: [
+              {
+                specs: { 规格: '默认' },
+                price: 99,
+                otPrice: 129,
+                cost: 50,
+                stock: 100,
+                weight: 0,
+                volume: 0,
+                image: 'crmebimage/public/product/demo-a.jpg',
+              },
+            ],
+          },
+        ],
+      },
     };
   },
   mounted() {
@@ -265,6 +354,16 @@ export default {
     this.checkedCities = this.$cache.local.has('goods_stroge')
       ? this.$cache.local.getJSON('goods_stroge')
       : this.checkedCities;
+  },
+  computed: {
+    importCanSubmit() {
+      return (
+        this.importFile &&
+        this.importResult &&
+        this.importResult.dryRun &&
+        Number(this.importResult.failed) === 0
+      );
+    },
   },
   methods: {
     checkPermi,
@@ -319,6 +418,80 @@ export default {
           isCopy: 1,
         },
       });
+    },
+    openImportDialog() {
+      this.importDialogVisible = true;
+    },
+    resetImportDialog() {
+      this.importFile = null;
+      this.importFileList = [];
+      this.importResult = null;
+      this.importLoading = false;
+      if (this.$refs.productImportUpload) this.$refs.productImportUpload.clearFiles();
+    },
+    downloadImportTemplate() {
+      const blob = new Blob([JSON.stringify(this.importTemplate, null, 2)], {
+        type: 'application/json;charset=utf-8',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'product-import-template.json';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    },
+    handleImportFileChange(file, fileList) {
+      if (!/\.json$/i.test(file.name || '')) {
+        this.$message.error('请选择JSON文件');
+        this.importFile = null;
+        this.importFileList = [];
+        if (this.$refs.productImportUpload) this.$refs.productImportUpload.clearFiles();
+        return;
+      }
+      this.importFile = file.raw;
+      this.importFileList = fileList.slice(-1);
+      this.importResult = null;
+    },
+    handleImportFileRemove() {
+      this.importFile = null;
+      this.importFileList = [];
+      this.importResult = null;
+    },
+    handleImportFileExceed() {
+      this.$message.warning('一次只能选择一个JSON文件');
+    },
+    validateProductImport() {
+      this.runProductImport(true);
+    },
+    confirmProductImport() {
+      this.runProductImport(false);
+    },
+    runProductImport(dryRun) {
+      if (!this.importFile) {
+        this.$message.warning('请先选择JSON文件');
+        return;
+      }
+      const formData = new FormData();
+      formData.append('file', this.importFile);
+      this.importLoading = true;
+      productJsonImportApi(formData, dryRun)
+        .then((res) => {
+          this.importResult = res;
+          if (dryRun) {
+            Number(res.failed) > 0 ? this.$message.warning('校验未通过') : this.$message.success('校验通过');
+            return;
+          }
+          this.$message.success(`导入完成，成功 ${res.success} 条，失败 ${res.failed} 条`);
+          this.getList();
+          this.goodHeade();
+          this.getCategorySelect();
+        })
+        .catch(() => {})
+        .then(() => {
+          this.importLoading = false;
+        });
     },
     // 导出
     exports() {
@@ -450,6 +623,25 @@ export default {
 
 .taoBaoModal {
   //  z-index: 3333 !important;
+}
+
+.importToolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.importHint {
+  color: #909399;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.importSummary {
+  margin-top: 12px;
+  color: #606266;
+  font-size: 13px;
 }
 
 .demo-table-expand {

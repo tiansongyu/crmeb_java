@@ -49,7 +49,7 @@
 - Modify: `crmeb/crmeb-admin/src/main/java/com/zbkj/admin/config/StartupRunner.java`
 
 - [ ] Set `asyncConfig: false` in default configs where the app previously synced seeded config automatically.
-- [ ] Guard the remote CRMEB startup update call so it is disabled unless explicitly configured.
+- [ ] Guard the legacy remote startup update call so it is disabled unless explicitly configured.
 
 ### Task 4: Update Tests and Smoke Defaults
 

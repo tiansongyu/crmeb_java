@@ -4,7 +4,7 @@
 
 **Goal:** Add a JSON batch import flow that lets admins create many products quickly from one file.
 
-**Architecture:** Add a focused backend product import service that parses uploaded JSON, converts each item to the existing `StoreProductAddRequest`, and delegates persistence to `StoreProductService.save`. Add an admin product-list dialog for template download, validation, and import. Extend template cleanup SQL with import permission and a default free-shipping template.
+**Architecture:** Add a focused backend product import service that parses uploaded JSON, converts each item to the existing `StoreProductAddRequest`, and delegates persistence to `StoreProductService.save`. Add an admin product-list dialog for template download, validation, and import. Extend template cleanup SQL with a default free-shipping template.
 
 **Tech Stack:** Spring Boot multipart upload, Fastjson, MyBatis Plus services, Vue2 + ElementUI, Docker Maven/Node build verification.
 
@@ -35,7 +35,7 @@
 - Modify: `docker-compose.yml`
 
 - [ ] Add `POST /api/admin/store/product/import/json`.
-- [ ] Add `admin:product:import:json` permission to template cleanup SQL if missing.
+- [ ] Reuse `admin:product:save` permission for the import endpoint and UI button.
 - [ ] Insert a default free-shipping template in template cleanup SQL.
 - [ ] Mount `template_store_cleanup_20260706.sql` into MySQL init order after activity SKU repair.
 

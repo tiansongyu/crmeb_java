@@ -54,7 +54,7 @@ public class OrderServiceImplTest {
         StoreCombination combination = new StoreCombination();
         combination.setId(34);
         combination.setProductId(91);
-        combination.setTitle("骆驼帐篷户外便携式折叠");
+        combination.setTitle("模板拼团商品");
         combination.setStock(20);
         combination.setOnceNum(1);
         combination.setNum(20);
@@ -65,7 +65,7 @@ public class OrderServiceImplTest {
         masterSku.setId(1140);
         masterSku.setProductId(91);
         masterSku.setType(Constants.PRODUCT_TYPE_NORMAL);
-        masterSku.setSuk("【2件套 新升级钛金黑胶】防潮垫+幻影驼色帐篷");
+        masterSku.setSuk("默认规格");
         masterSku.setStock(9);
 
         StoreProductAttrValue combinationSku = new StoreProductAttrValue();
@@ -76,7 +76,7 @@ public class OrderServiceImplTest {
         combinationSku.setPrice(new BigDecimal("170.60"));
         combinationSku.setStock(9);
         combinationSku.setQuota(20);
-        combinationSku.setImage("tent.jpg");
+        combinationSku.setImage("template-product.jpg");
         combinationSku.setVolume(BigDecimal.ZERO);
         combinationSku.setWeight(BigDecimal.ZERO);
 

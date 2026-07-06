@@ -3,10 +3,12 @@ package com.zbkj.admin.controller;
 import com.zbkj.common.model.product.StoreProduct;
 import com.zbkj.common.page.CommonPage;
 import com.zbkj.common.request.*;
+import com.zbkj.common.response.ProductImportResponse;
 import com.zbkj.common.response.StoreProductInfoResponse;
 import com.zbkj.common.response.StoreProductResponse;
 import com.zbkj.common.response.StoreProductTabsHeader;
 import com.zbkj.common.result.CommonResult;
+import com.zbkj.service.service.ProductImportService;
 import com.zbkj.service.service.StoreCartService;
 import com.zbkj.service.service.StoreProductService;
 import io.swagger.annotations.Api;
@@ -19,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
 import java.io.IOException;
@@ -49,6 +52,9 @@ public class StoreProductController {
 
     @Autowired
     private StoreCartService storeCartService;
+
+    @Autowired
+    private ProductImportService productImportService;
 
     /**
      * 分页显示商品表
@@ -83,6 +89,17 @@ public class StoreProductController {
         } else {
             return CommonResult.failed();
         }
+    }
+
+    /**
+     * JSON批量导入商品
+     */
+    @PreAuthorize("hasAuthority('admin:product:save')")
+    @ApiOperation(value = "JSON批量导入商品")
+    @RequestMapping(value = "/import/json", method = RequestMethod.POST)
+    public CommonResult<ProductImportResponse> importJson(@RequestParam("file") MultipartFile file,
+                                                          @RequestParam(value = "dryRun", required = false, defaultValue = "true") Boolean dryRun) {
+        return CommonResult.success(productImportService.importProducts(file, dryRun));
     }
 
     /**
@@ -227,6 +244,5 @@ public class StoreProductController {
     }
 
 }
-
 
 

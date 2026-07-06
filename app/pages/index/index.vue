@@ -51,6 +51,16 @@
 							<!-- 选项卡商品列表-->
 							<homeTab v-if="item.name == 'homeTab'&&!item.isHide" :dataConfig="item" @detail="goDetail"></homeTab>
 						</view>
+						<view v-if="showTemplatePlaceholder" class="template-placeholder">
+							<view class="template-placeholder__title">商城模板</view>
+							<view class="template-placeholder__subtitle">请在后台添加商品并装修首页</view>
+							<view class="template-placeholder__categories">
+								<view class="template-placeholder__category" v-for="item in templateCategories" :key="item">
+									{{ item }}
+								</view>
+							</view>
+							<view class="template-placeholder__empty">暂无商品</view>
+						</view>
 					</view>
 
 					<!-- 分类页-->
@@ -186,7 +196,15 @@
 	var statusBarHeight = uni.getSystemInfoSync().statusBarHeight + 'px';
 	let app = getApp();
 	export default {
-		computed: mapGetters(['isLogin', 'uid', 'bottomNavigationIsCustom']),
+		computed: {
+			...mapGetters(['isLogin', 'uid', 'bottomNavigationIsCustom']),
+			showTemplatePlaceholder() {
+				const visibleDiyItems = (this.styleConfig || []).filter((item) => {
+					return item && !item.isHide && !['headerSerch', 'homeComb', 'tabNav'].includes(item.name);
+				});
+				return this.navIndex === 0 && !this.showSkeleton && visibleDiyItems.length === 0;
+			}
+		},
 		components: {
 			tuiSkeleton,
 			aTip,
@@ -250,6 +268,7 @@
 				cateNavActive: 0,
 				couponModal: false,
 				styleConfig: [], //DIY数据
+				templateCategories: ['模板分类一', '模板分类二', '模板分类三'],
 				diyId: 0, //DIYID
 				smallPage: false, //是否微页面
 				isHeaderSerch: false,
@@ -527,7 +546,7 @@
 			},
 			xieyiApp() {
 				uni.navigateTo({
-					url: '/pages/users/web_page/index?webUel=https://admin.java.crmeb.net/useragreement/xieyi.html&title=协议内容'
+					url: '/pages/users/web_page/index?webUel=https://template-store.example.com/useragreement/xieyi.html&title=协议内容'
 				})
 			},
 			// #ifdef APP-PLUS
@@ -535,7 +554,7 @@
 				uni.navigateTo({
 					animationType: animationType.type,
 					animationDuration: animationType.duration,
-					url: '/pages/users/web_page/index?webUel=https://admin.java.crmeb.net/useragreement/xieyi.html&title=协议内容'
+					url: '/pages/users/web_page/index?webUel=https://template-store.example.com/useragreement/xieyi.html&title=协议内容'
 				})
 			},
 			// #endif
@@ -781,6 +800,56 @@
 
 	.noCommodity {
 		margin-top: 30%;
+	}
+
+	.template-placeholder {
+		margin: 28rpx 24rpx 40rpx;
+		padding: 36rpx 28rpx;
+		background: #ffffff;
+		border: 1rpx solid #e9edf2;
+		border-radius: 8rpx;
+	}
+
+	.template-placeholder__title {
+		color: #1f2a37;
+		font-size: 36rpx;
+		font-weight: 600;
+		line-height: 48rpx;
+	}
+
+	.template-placeholder__subtitle {
+		margin-top: 10rpx;
+		color: #6b7280;
+		font-size: 26rpx;
+		line-height: 38rpx;
+	}
+
+	.template-placeholder__categories {
+		display: flex;
+		flex-wrap: wrap;
+		margin-top: 28rpx;
+	}
+
+	.template-placeholder__category {
+		margin: 0 16rpx 16rpx 0;
+		padding: 14rpx 20rpx;
+		color: #2f6f73;
+		font-size: 24rpx;
+		line-height: 32rpx;
+		background: #e7f4f1;
+		border-radius: 8rpx;
+	}
+
+	.template-placeholder__empty {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 180rpx;
+		margin-top: 30rpx;
+		color: #9ca3af;
+		font-size: 28rpx;
+		background: #f6f7f9;
+		border-radius: 8rpx;
 	}
 
 	.icon-gengduo1 {

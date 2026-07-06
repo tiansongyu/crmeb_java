@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build and run a repeatable smoke test that covers CRMEB's end-to-end purchase, manual QR payment, admin payment audit, shipment, receipt, refund approval, and refund refusal flows.
+**Goal:** Build and run a repeatable smoke test that covers the template store's end-to-end purchase, manual QR payment, admin payment audit, shipment, receipt, refund approval, and refund refusal flows.
 
 **Architecture:** Add one Python stdlib smoke runner under `tests/` that drives the deployed HTTP APIs with admin and front tokens. The runner creates fresh orders from public product data, uses manual QR payment for deterministic payment, uses fictitious shipment to avoid third-party logistics dependencies, and verifies order states through both front and admin APIs.
 
-**Tech Stack:** Python 3 stdlib (`urllib`, `json`, `argparse`), CRMEB front/admin REST APIs, existing Docker/manual-QR deployment.
+**Tech Stack:** Python 3 stdlib (`urllib`, `json`, `argparse`), front/admin REST APIs, existing Docker/manual-QR deployment.
 
 ---
 
@@ -31,7 +31,7 @@ Create `tests/purchase_flow_smoke.py` with:
 
 ```python
 #!/usr/bin/env python3
-"""End-to-end CRMEB purchase flow smoke tests."""
+"""End-to-end template store purchase flow smoke tests."""
 ```
 
 The script must:

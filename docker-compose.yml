@@ -21,6 +21,7 @@ services:
       - ./docker/mysql/02-quartz-case.sql:/docker-entrypoint-initdb.d/02-quartz-case.sql:ro
       - ./crmeb/sql/manual_qr_payment_20260704.sql:/docker-entrypoint-initdb.d/03-manual-qr-payment.sql:ro
       - ./crmeb/sql/activity_sku_repair_20260705.sql:/docker-entrypoint-initdb.d/04-activity-sku-repair.sql:ro
+      - ./crmeb/sql/template_store_cleanup_20260706.sql:/docker-entrypoint-initdb.d/05-template-store-cleanup.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root123456}"]
       interval: 10s
@@ -66,13 +67,13 @@ services:
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
       SPRING_REDIS_PASSWORD: ""
-      CRMEB_IMAGE_PATH: /data/crmeb/
+      CRMEB_IMAGE_PATH: /data/template-store/
       JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
       TZ: Asia/Shanghai
     ports:
       - "0.0.0.0:${ADMIN_API_PORT:-20400}:20400"
     volumes:
-      - upload_data:/data/crmeb
+      - upload_data:/data/template-store
 
   crmeb-front:
     build:
@@ -98,13 +99,13 @@ services:
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
       SPRING_REDIS_PASSWORD: ""
-      CRMEB_IMAGE_PATH: /data/crmeb/
+      CRMEB_IMAGE_PATH: /data/template-store/
       JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
       TZ: Asia/Shanghai
     ports:
       - "0.0.0.0:${FRONT_API_PORT:-20410}:20410"
     volumes:
-      - upload_data:/data/crmeb
+      - upload_data:/data/template-store
 
   admin-web:
     build:

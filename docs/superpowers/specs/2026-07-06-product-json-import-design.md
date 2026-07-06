@@ -86,11 +86,11 @@ Response:
 - `dryRun`: whether the request wrote data
 - `items`: per-product result with row number, product name, status, product id if imported, and message
 
-Authorization uses a new permission:
+Authorization reuses the existing product-create permission:
 
-- `admin:product:import:json`
+- `admin:product:save`
 
-The cleanup SQL adds this permission to the admin menu seed so the existing admin role can use it.
+The import flow creates products through the same backend save path as the single-product form, so using the existing create permission keeps old and fresh databases compatible.
 
 ## Admin UI
 

@@ -14,8 +14,8 @@ DB_NAME = os.environ.get("DB_NAME", "crmeb")
 MYSQL_CONTAINER = os.environ.get("MYSQL_CONTAINER", "crmeb-mysql")
 MYSQL_USER = os.environ.get("MYSQL_USER", "root")
 MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "root123456")
-FRONT_ACCOUNT = os.environ.get("FRONT_ACCOUNT", "18292417675")
-FRONT_PASSWORD = os.environ.get("FRONT_PASSWORD", "Crmeb_123456")
+FRONT_ACCOUNT = os.environ.get("FRONT_ACCOUNT")
+FRONT_PASSWORD = os.environ.get("FRONT_PASSWORD")
 REQUIRE_ACTIVE = os.environ.get("REQUIRE_ACTIVE", "1") != "0"
 
 PRODUCT_TYPE_NORMAL = 0
@@ -281,6 +281,8 @@ def check_bargain_api(token, bargains):
 
 def main():
     print("Activity smoke BASE_URL={} DB_NAME={}".format(BASE_URL, DB_NAME))
+    if not FRONT_ACCOUNT or not FRONT_PASSWORD:
+        raise SystemExit("FRONT_ACCOUNT and FRONT_PASSWORD must be set for template-store activity smoke tests")
     token = login()
     now_ms = int(time.time() * 1000)
     combinations = active_combinations(now_ms)

@@ -1,10 +1,10 @@
-# CRMEB 相关配置
+# Template Store 相关配置
 crmeb:
-  version: CRMEB-JAVA-KY-v1.4 # 当前代码版本
-  imagePath: /Users/dazongzi/Documents/ZBKJ/CODEMANGER/BIZ-CODE/JavaSingel/back_old_version/V2.1/CRMEB_JAVA_SY_V2.1-20240827/single_java/ # 服务器图片路径配置 斜杠结尾
+  version: Template-Store-v1.0 # 当前代码版本
+  imagePath: /data/template-store/front/ # 服务器图片路径配置 斜杠结尾
   asyncConfig: false #是否同步config表数据到redis
   activityStyleCachedTime: 10 #活动边框缓存周期 秒为单位，生产环境适当5-10分钟即可
-  demoSite: true # 是否演示站点 所有手机号码都会掩码
+  demoSite: false # 是否演示站点 所有手机号码都会掩码
   ignored: #安全路径白名单
     - swagger-ui/
     - swagger-resources/**
@@ -94,7 +94,7 @@ mybatis-plus:
 aj:
   captcha:
     type: default       # 验证码类型
-    water-mark: CRMEB Java   # 水印
+    water-mark: Template Store   # 水印
     slip-offset: 15      # 校验滑动拼图允许误差偏移量(默认5像素)
     aes-status: true    # aes加密坐标开启或者禁用(true|false)
     interference-options: 2 # 滑动干扰项(0/1/2)

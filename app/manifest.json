@@ -1,7 +1,7 @@
 {
-    "name" : "CRMEB",
+    "name" : "商城模板",
     "appid" : "__UNI__D911EFA",
-    "description" : "crmeb商城",
+    "description" : "Template Store",
     "versionName" : "2.1",
     "versionCode" : 2,
     "transformPx" : false,
@@ -54,7 +54,7 @@
             "ios" : {
                 "capabilities" : {
                     "entitlements" : {
-                        "com.apple.developer.associated-domains" : [ "applinks:app.beta.java.crmeb.net" ]
+                        "com.apple.developer.associated-domains" : [ "applinks:template-store.example.com" ]
                     }
                 },
                 "privacyDescription" : {
@@ -84,9 +84,9 @@
                 "oauth" : {
                     "apple" : {},
                     "weixin" : {
-                        "appid" : "wxa83d6fab40cab13f",
-                        "appsecret" : "e1d254e4c6a68b10bd60bd347bf0ffba",
-                        "UniversalLinks" : "https://app.beta.java.crmeb.net/"
+                        "appid" : "",
+                        "appsecret" : "",
+                        "UniversalLinks" : "https://template-store.example.com/"
                     }
                 },
                 "maps" : {
@@ -97,15 +97,15 @@
                 },
                 "share" : {
                     "weixin" : {
-                        "appid" : "wxa83d6fab40cab13f",
-                        "UniversalLinks" : "https://app.beta.java.crmeb.net/"
+                        "appid" : "",
+                        "UniversalLinks" : "https://template-store.example.com/"
                     }
                 },
                 "payment" : {
                     "weixin" : {
                         "__platform__" : [ "ios", "android" ],
-                        "appid" : "wxa83d6fab40cab13f",
-                        "UniversalLinks" : "https://app.beta.java.crmeb.net/"
+                        "appid" : "",
+                        "UniversalLinks" : "https://template-store.example.com/"
                     },
                     "alipay" : {
                         "__platform__" : [ "ios", "android" ]
@@ -153,7 +153,7 @@
     "quickapp" : {},
     /* 小程序特有相关 */
     "mp-weixin" : {
-        "appid" : "wx2ce61fcc6fc5f952",
+        "appid" : "",
         "setting" : {
             "urlCheck" : false,
             "minified" : true,
@@ -177,7 +177,7 @@
     },
     "mp-toutiao" : {
         "usingComponents" : true,
-        "appid" : "tt1688603589b1e71d01",
+        "appid" : "",
         "setting" : {
             "es6" : true,
             "postcss" : true,
@@ -226,4 +226,3 @@
     "sassImplementationName" : "node-sass"
 }
 /* ios打包配置 */
-

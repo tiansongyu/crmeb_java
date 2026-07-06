@@ -78,8 +78,8 @@ Run:
 ```bash
 BASE_URL=http://127.0.0.1:21410 \
 DB_NAME=crmeb_payment_test_20260705120436 \
-FRONT_ACCOUNT=18292417675 \
-FRONT_PASSWORD=Crmeb_123456 \
+FRONT_ACCOUNT=<test-account> \
+FRONT_PASSWORD=<test-password> \
 python3 scripts/smoke/activity_smoke.py
 ```
 

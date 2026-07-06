@@ -265,6 +265,20 @@ export function importProductApi(params) {
 }
 
 /**
+ * 商品JSON批量导入
+ * @param data FormData
+ * @param dryRun 是否仅校验
+ */
+export function productJsonImportApi(data, dryRun = true) {
+  return request({
+    url: `/admin/store/product/import/json`,
+    method: 'post',
+    params: { dryRun },
+    data,
+  });
+}
+
+/**
  * 商品复制 一号通
  * @param pram
  */
