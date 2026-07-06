@@ -97,5 +97,6 @@ assert_scalar "select count(*) from eb_system_admin;" "1"
 assert_scalar "select count(*) from eb_system_config where name = 'pay_mode' and value = 'offline_qr';" "1"
 assert_scalar "select count(*) from eb_system_config where name = 'offline_pay_status' and value = '''1''';" "1"
 assert_scalar "select count(*) from eb_system_config where name = 'pay_weixin_open' and value = '''0''';" "1"
+assert_scalar "select count(*) from eb_system_config where name in ('copyright_company_name', 'copyright_company_image', 'copyright_icp_number', 'copyright_icp_number_url', 'copyright_internet_record', 'copyright_internet_record_url') and value <> '';" "0"
 
 echo "template SQL verification passed"

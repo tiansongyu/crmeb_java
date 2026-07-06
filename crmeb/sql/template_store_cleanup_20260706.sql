@@ -159,11 +159,6 @@ WHERE `name` IN (
 );
 
 UPDATE `eb_system_config`
-SET `value` = 'Template Store',
-    `update_time` = NOW()
-WHERE `name` = 'copyright_company_name';
-
-UPDATE `eb_system_config`
 SET `value` = '商城模板占位数据，请在后台添加商品、装修首页并配置收款码。',
     `update_time` = NOW()
 WHERE `name` = 'wechat_share_synopsis';
@@ -172,9 +167,12 @@ UPDATE `eb_system_config`
 SET `value` = '',
     `update_time` = NOW()
 WHERE `name` IN (
+  'copyright_company_name',
   'copyright_company_image',
   'copyright_icp_number',
   'copyright_icp_number_url',
+  'copyright_internet_record',
+  'copyright_internet_record_url',
   'copyright_internet_culture',
   'copyright_internet_culture_url',
   'copyright_network_security',
