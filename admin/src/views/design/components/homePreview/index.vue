@@ -46,6 +46,7 @@ import { mapState, mapGetters } from 'vuex';
 import { pagediyInfoApi, pagediyGetSetHome } from '@/api/pagediy';
 import { mediaDomainApi, changeColorApi } from '@/api/systemConfig';
 import mPage from '../mobilePage/index.js';
+import { applyComponentDefaults, buildDefaultConfigMap } from '../../utils/diyNormalize';
 
 export default {
   name: 'HomePreview',
@@ -66,6 +67,7 @@ export default {
       mConfig: [], // 当前页面需渲染的组件列表
       propsObj: {},
       loading: true,
+      defaultConfigMap: {},
     };
   },
   computed: {
@@ -100,6 +102,7 @@ export default {
   },
   created() {
     this.lConfig = this.objToArr(mPage);
+    this.defaultConfigMap = buildDefaultConfigMap(this.lConfig);
   },
   mounted() {
     this.getMobileTheme();
@@ -163,6 +166,7 @@ export default {
       newArr.sort((a, b) => a.timestamp - b.timestamp);
       const mConfig = [];
       newArr.forEach((el) => {
+        applyComponentDefaults(el, this.defaultConfigMap);
         if (el.name === 'goodList' && el.selectConfig) {
           localStorage.setItem(el.timestamp, el.selectConfig.activeValue);
         }

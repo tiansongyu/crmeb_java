@@ -32,4 +32,27 @@ export function deepMergeMissing(target, source) {
   return target;
 }
 
-export default { deepMergeMissing };
+export function buildDefaultConfigMap(components) {
+  const map = {};
+  (components || []).forEach((comp) => {
+    try {
+      if (comp && comp.defaultName && typeof comp.data === 'function') {
+        const def = comp.data().defaultConfig;
+        if (def && typeof def === 'object') map[comp.defaultName] = def;
+      }
+    } catch (e) {
+      // 单个组件默认配置提取失败不影响整体加载
+    }
+  });
+  return map;
+}
+
+export function applyComponentDefaults(section, componentsOrMap) {
+  if (!section || typeof section !== 'object') return section;
+  const defaultsMap = Array.isArray(componentsOrMap) ? buildDefaultConfigMap(componentsOrMap) : componentsOrMap || {};
+  const def = defaultsMap[section.name];
+  if (def) deepMergeMissing(section, def);
+  return section;
+}
+
+export default { deepMergeMissing, buildDefaultConfigMap, applyComponentDefaults };

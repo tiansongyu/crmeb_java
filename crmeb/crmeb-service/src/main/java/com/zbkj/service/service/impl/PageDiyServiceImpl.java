@@ -85,15 +85,14 @@ public class PageDiyServiceImpl extends ServiceImpl<PageDiyDao, PageDiy> impleme
     @Override
     public PageDiy savePageDiy(PageDiy pageDiy) {
         String adminApiPath = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_KEY_API_URL);
-        if (StrUtil.isBlank(adminApiPath)) {
-            throw new CrmebException(CommonResultCode.VALIDATE_FAILED, "应用设置中 微信小程序数据配置 或者 支付回调地址以及网站地址 配置不全");
-        }
         // 检查diy模版名称唯一
         checkPageDiyNameUnique(pageDiy.getName(), null);
-        DocumentContext jsonContext = JsonPath.parse(pageDiy.getValue());
-        // 通配符去掉关键子 再存储
-        jsonContext.delete("$..*[?(@ == '"+ adminApiPath +"')]");
-        pageDiy.setValue(jsonContext.jsonString());
+        if (StrUtil.isNotBlank(adminApiPath)) {
+            DocumentContext jsonContext = JsonPath.parse(pageDiy.getValue());
+            // 通配符去掉关键子 再存储
+            jsonContext.delete("$..*[?(@ == '"+ adminApiPath +"')]");
+            pageDiy.setValue(jsonContext.jsonString());
+        }
         save(pageDiy);
         return pageDiy;
     }
@@ -105,10 +104,6 @@ public class PageDiyServiceImpl extends ServiceImpl<PageDiyDao, PageDiy> impleme
      */
     @Override
     public Boolean editPageDiy(PageDiy pageDiy) {
-        String adminApiPath = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_KEY_API_URL);
-        if (StrUtil.isBlank(adminApiPath)) {
-            throw new CrmebException(CommonResultCode.VALIDATE_FAILED, "应用设置中 微信小程序数据配置 或者 支付回调地址以及网站地址 配置不全");
-        }
         // 检查diy模版名称唯一
         checkPageDiyNameUnique(pageDiy.getName(), pageDiy.getId());
 //        DocumentContext jsonContext = JsonPath.parse(pageDiy.getValue());
@@ -331,4 +326,3 @@ public class PageDiyServiceImpl extends ServiceImpl<PageDiyDao, PageDiy> impleme
 
     ////////////////////////////////// 内部处理json配置中的素材地址方法 END
 }
-
