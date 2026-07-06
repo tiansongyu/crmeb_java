@@ -215,13 +215,13 @@
 				textareaStatus: true,
 				//支付方式
 				cartArr: [{
-					"name": "扫码转账",
+					"name": "支付方式",
 					"icon": "icon-yuezhifu1",
-					value: 'offline',
-					title: '上传付款凭证后等待确认',
+					value: '',
+					title: '',
 					payStatus: 1,
 				}],
-				payType: 'offline', //支付方式
+				payType: '', //支付方式
 				openType: 1, //优惠券打开方式 1=使用
 				active: 0, //支付方式切换
 				coupon: {
@@ -297,7 +297,7 @@
 			}
 		},
 		onLoad(options) {
-			this.payChannel = 'offline';
+			this.payChannel = '';
 			// if (!options.cartId) return this.$util.Tips({
 			// 	title: '请选择要购买的商品'
 			// }, {
@@ -346,8 +346,13 @@
 					}
 					this.cartInfo = orderInfoVo.orderDetailList;
 					this.orderProNum = orderInfoVo.orderProNum;
-					this.cartArr[0].payStatus = res.data.offlinePayStatus === true || res.data.offlinePayStatus === 1 || res.data.offlinePayStatus === '1' ? 1 : 0;
-					this.cartArr[0].title = res.data.offlinePayTips || '上传付款凭证后等待确认';
+					const offlineOpen = res.data.offlinePayStatus === true || res.data.offlinePayStatus === 1 || res.data.offlinePayStatus === '1';
+					const wechatOpen = res.data.payWeixinOpen === true || res.data.payWeixinOpen === 1 || res.data.payWeixinOpen === '1' || res.data.payWechatOpen === true;
+					const yueOpen = res.data.yuePayStatus === true || res.data.yuePayStatus === 1 || res.data.yuePayStatus === '1' || res.data.yuePayStatus === "'1'";
+					this.cartArr[0].payStatus = offlineOpen || wechatOpen || yueOpen ? 1 : 0;
+					this.cartArr[0].value = offlineOpen ? 'offline' : wechatOpen ? 'weixin' : yueOpen ? 'yue' : '';
+					this.cartArr[0].name = offlineOpen ? '扫码转账' : wechatOpen ? '微信支付' : yueOpen ? '余额支付' : '支付方式';
+					this.cartArr[0].title = offlineOpen ? (res.data.offlinePayTips || '上传付款凭证后等待确认') : wechatOpen ? '微信在线支付' : yueOpen ? '余额支付' : '';
 					this.getaddressInfo();
 					this.store_self_mention = res.data.storeSelfMention == '1' && this
 						.productType ===
@@ -511,7 +516,6 @@
 				that.active = active;
 				that.animated = true;
 				that.payType = that.cartArr[active].value;
-				that.payChannel = 'offline';
 				//that.computedPrice();
 				setTimeout(function() {
 					that.car();
@@ -575,7 +579,7 @@
 				let that = this,
 					data = {};
 				if (that.cartArr[0].payStatus !== 1) return that.$util.Tips({
-					title: '扫码转账支付暂未开启'
+					title: '支付方式暂未开启'
 				});
 				if (!that.addressId && !that.shippingType) return that.$util.Tips({
 					title: '请选择收货地址'
@@ -938,13 +942,13 @@
 		opacity: 0
 	}
 
-	/deep/ checkbox .uni-checkbox-input.uni-checkbox-input-checked {
+	::v-deep checkbox .uni-checkbox-input.uni-checkbox-input-checked {
 		@include main_bg_color(theme);
 		border: none !important;
 		color: #fff !important
 	}
 
-	/deep/ checkbox .wx-checkbox-input.wx-checkbox-input-checked {
+	::v-deep checkbox .wx-checkbox-input.wx-checkbox-input-checked {
 		@include main_bg_color(theme);
 		border: none !important;
 		color: #fff !important;

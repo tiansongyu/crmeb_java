@@ -6,7 +6,7 @@
 			<view class="order-no">{{orderNo}}</view>
 		</view>
 
-		<view class="section">
+		<view class="section" v-if="paymentMode === 'offline'">
 			<view class="section-title">扫码转账</view>
 			<view class="qrcode-wrap" @tap="previewQrcode">
 				<image v-if="offlinePayQrcode" :src="offlinePayQrcode" mode="aspectFit"></image>
@@ -16,7 +16,7 @@
 			<view class="pay-tips" v-if="offlinePayTips">{{offlinePayTips}}</view>
 		</view>
 
-		<view class="section">
+		<view class="section" v-if="paymentMode === 'offline'">
 			<view class="section-title">付款凭证</view>
 			<view class="upload-box" v-if="!voucher" @tap="uploadProof">
 				<view class="upload-icon">+</view>
@@ -34,7 +34,20 @@
 			</view>
 		</view>
 
-		<view class="footer">
+		<view class="section" v-if="paymentMode === 'weixin' || paymentMode === 'yue'">
+			<view class="section-title">{{paymentMode === 'weixin' ? '微信在线支付' : '余额支付'}}</view>
+			<view class="pay-tips">{{paymentMode === 'weixin' ? '点击后拉起微信支付，支付结果由微信回调自动确认。' : '点击后使用账户余额完成支付。'}}</view>
+			<button class="online-submit bg-color" :disabled="submitting" @tap="startOnlinePay">
+				{{submitting ? '支付中' : '立即支付'}}
+			</button>
+		</view>
+
+		<view class="section" v-if="paymentMode === 'none'">
+			<view class="section-title">暂无支付方式</view>
+			<view class="pay-tips">后台未开启可用支付方式，请联系管理员处理。</view>
+		</view>
+
+		<view class="footer" v-if="paymentMode === 'offline'">
 			<button class="submit bg-color" :disabled="submitting" @tap="submitProof">
 				{{submitting ? '提交中' : '提交付款凭证'}}
 			</button>
@@ -45,8 +58,11 @@
 <script>
 	import {
 		orderPay,
-		offlinePayProof
+		offlinePayProof,
+		getOrderPayConfig,
+		wechatQueryPayResult
 	} from '@/api/order.js';
+	import { openOrderSubscribe } from '@/utils/SubscribeMessage.js';
 	import {
 		mapGetters
 	} from "vuex";
@@ -61,13 +77,14 @@
 				offlinePayQrcode: '',
 				offlinePayName: '',
 				offlinePayTips: '',
+				paymentMode: 'loading',
 				voucher: '',
 				tradeNo: '',
 				remark: '',
 				submitting: false
 			}
 		},
-		computed: mapGetters(['productType']),
+		computed: mapGetters(['productType', 'systemPlatform']),
 		onLoad(options) {
 			this.orderNo = options.orderNo || '';
 			this.payPrice = options.payPrice || '0';
@@ -79,13 +96,39 @@
 					url: '/pages/users/order_list/index'
 				});
 			}
-			this.initOfflinePay();
+			this.initPayment();
 		},
 		methods: {
-			initOfflinePay() {
+			initPayment() {
 				uni.showLoading({
 					title: '正在加载'
 				});
+				getOrderPayConfig().then(res => {
+					const data = res.data || {};
+					if (data.offlinePayStatus) {
+						this.paymentMode = 'offline';
+						this.initOfflinePay();
+						return;
+					}
+					uni.hideLoading();
+					if (data.payWechatOpen) {
+						this.paymentMode = 'weixin';
+						return;
+					}
+					if (data.yuePayStatus) {
+						this.paymentMode = 'yue';
+						return;
+					}
+					this.paymentMode = 'none';
+				}).catch(err => {
+					uni.hideLoading();
+					this.paymentMode = 'none';
+					this.$util.Tips({
+						title: err
+					});
+				});
+			},
+			initOfflinePay() {
 				orderPay({
 					orderNo: this.orderNo,
 					payChannel: 'offline',
@@ -104,6 +147,193 @@
 						title: err
 					});
 				});
+			},
+			getPayChannel() {
+				if (this.paymentMode === 'yue') return 'yue';
+				// #ifdef H5
+				return this.$wechat.isWeixin() ? 'public' : 'weixinh5';
+				// #endif
+				// #ifdef APP-PLUS
+				return this.systemPlatform === 'ios' ? 'weixinAppIos' : 'weixinAppAndroid';
+				// #endif
+				// #ifdef MP
+				return this.productType === 'video' ? 'video' : 'routine';
+				// #endif
+			},
+			startOnlinePay() {
+				if (this.paymentMode !== 'weixin' && this.paymentMode !== 'yue') return;
+				this.submitting = true;
+				uni.showLoading({
+					title: '支付中'
+				});
+				const goPages = '/pages/order/order_pay_status/index?order_id=' + this.orderNo;
+				orderPay({
+					orderNo: this.orderNo,
+					payChannel: this.getPayChannel(),
+					payType: this.paymentMode === 'weixin' ? 'weixin' : 'yue',
+					scene: this.productType === 'normal' ? 0 : 1177
+				}).then(res => {
+					const data = res.data || {};
+					const jsConfig = data.jsConfig;
+					this.orderNo = data.orderNo || this.orderNo;
+					if (data.payType === 'yue') {
+						uni.hideLoading();
+						this.submitting = false;
+						return this.$util.Tips({
+							title: '支付成功',
+							icon: 'success'
+						}, {
+							tab: 5,
+							url: goPages + '&status=1'
+						});
+					}
+					if (data.payType === 'weixinh5') {
+						setTimeout(() => {
+							location.href = jsConfig.mwebUrl + '&redirect_url=' + window.location.protocol + '//' + window.location.host + goPages + '&status=1';
+						}, 100);
+						uni.hideLoading();
+						this.submitting = false;
+						return;
+					}
+					this.weixinPay(jsConfig, this.orderNo, goPages);
+				}).catch(err => {
+					uni.hideLoading();
+					this.submitting = false;
+					this.$util.Tips({
+						title: err
+					});
+				});
+			},
+			weixinPay(jsConfig, orderNo, goPages) {
+				let that = this;
+				// #ifdef MP
+				uni.requestPayment({
+					timeStamp: jsConfig.timeStamp,
+					nonceStr: jsConfig.nonceStr,
+					package: jsConfig.packages,
+					signType: jsConfig.signType,
+					paySign: jsConfig.paySign,
+					success: function() {
+						uni.hideLoading();
+						that.submitting = false;
+						openOrderSubscribe().then(() => {
+							return that.$util.Tips({
+								title: '支付成功',
+								icon: 'success'
+							}, {
+								tab: 5,
+								url: goPages
+							});
+						});
+					},
+					fail: function() {
+						uni.hideLoading();
+						that.submitting = false;
+						return that.$util.Tips({
+							title: '取消支付'
+						}, {
+							tab: 5,
+							url: goPages + '&status=2'
+						});
+					}
+				});
+				// #endif
+				// #ifdef H5
+				let data = {
+					timestamp: jsConfig.timeStamp,
+					nonceStr: jsConfig.nonceStr,
+					package: jsConfig.packages,
+					signType: jsConfig.signType,
+					paySign: jsConfig.paySign
+				};
+				that.$wechat.pay(data).then(res => {
+					if (res.errMsg == 'chooseWXPay:cancel') {
+						uni.hideLoading();
+						that.submitting = false;
+						return that.$util.Tips({
+							title: '取消支付'
+						}, {
+							tab: 5,
+							url: goPages + '&status=2'
+						});
+					}
+					wechatQueryPayResult(orderNo).then(() => {
+						uni.hideLoading();
+						that.submitting = false;
+						return that.$util.Tips({
+							title: '支付成功',
+							icon: 'success'
+						}, {
+							tab: 5,
+							url: goPages
+						});
+					}).catch(err => {
+						uni.hideLoading();
+						that.submitting = false;
+						return that.$util.Tips({
+							title: err
+						});
+					});
+				}).catch(() => {
+					uni.hideLoading();
+					that.submitting = false;
+					return that.$util.Tips({
+						title: '取消支付'
+					}, {
+						tab: 5,
+						url: goPages + '&status=2'
+					});
+				});
+				// #endif
+				// #ifdef APP-PLUS
+				uni.requestPayment({
+					provider: 'wxpay',
+					orderInfo: {
+						appid: jsConfig.appId,
+						noncestr: jsConfig.nonceStr,
+						package: 'Sign=WXPay',
+						partnerid: jsConfig.partnerid,
+						prepayid: jsConfig.packages,
+						timestamp: Number(jsConfig.timeStamp),
+						sign: this.systemPlatform === 'ios' ? 'MD5' : jsConfig.paySign
+					},
+					success: function() {
+						wechatQueryPayResult(orderNo).then(() => {
+							uni.hideLoading();
+							that.submitting = false;
+							uni.showToast({
+								title: '支付成功'
+							});
+							setTimeout(() => {
+								uni.redirectTo({
+									url: goPages
+								});
+							}, 2000);
+						}).catch(err => {
+							uni.hideLoading();
+							that.submitting = false;
+							return that.$util.Tips({
+								title: err
+							});
+						});
+					},
+					fail: function() {
+						uni.hideLoading();
+						that.submitting = false;
+						uni.showModal({
+							content: '支付失败',
+							showCancel: false,
+							success: function(res) {
+								if (res.confirm) {
+									uni.redirectTo({
+										url: goPages + '&status=2'
+									});
+								}
+							}
+						});
+					}
+				});
+				// #endif
 			},
 			uploadProof() {
 				this.$util.uploadImageOne({
@@ -327,6 +557,16 @@
 	}
 
 	.submit {
+		height: 86rpx;
+		line-height: 86rpx;
+		border-radius: 43rpx;
+		color: #fff;
+		font-size: 30rpx;
+		font-weight: 700;
+	}
+
+	.online-submit {
+		margin-top: 36rpx;
 		height: 86rpx;
 		line-height: 86rpx;
 		border-radius: 43rpx;

@@ -40,6 +40,7 @@ import com.zbkj.common.response.*;
 import com.zbkj.common.utils.CrmebUtil;
 import com.zbkj.common.utils.CrmebDateUtil;
 import com.zbkj.common.utils.OfflinePayUtil;
+import com.zbkj.common.utils.PaymentModeUtil;
 import com.zbkj.common.utils.RedisUtil;
 import com.zbkj.common.vo.*;
 import com.zbkj.service.delete.OrderUtils;
@@ -101,6 +102,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private SystemConfigService systemConfigService;
+
+    @Autowired
+    private PaymentModeService paymentModeService;
 
     @Autowired
     private StoreProductReplyService storeProductReplyService;
@@ -1228,8 +1232,8 @@ public class OrderServiceImpl implements OrderService {
     public PreOrderResponse getPayConfig() {
         PreOrderResponse preOrderResponse = new PreOrderResponse();
         String storeSelfMention = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_KEY_STORE_SELF_MENTION);
-        preOrderResponse.setYuePayStatus("0");
-        preOrderResponse.setPayWeixinOpen("0");
+        preOrderResponse.setYuePayStatus(isYuePayOpen() ? "1" : "0");
+        preOrderResponse.setPayWeixinOpen(isWechatPayOpen() ? "1" : "0");
         preOrderResponse.setStoreSelfMention(storeSelfMention);
         preOrderResponse.setAliPayStatus("0");
         fillOfflinePayConfig(preOrderResponse);
@@ -1244,7 +1248,15 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private Boolean isOfflinePayOpen() {
-        String status = systemConfigService.getValueByKey(OfflinePayConstants.CONFIG_OFFLINE_PAY_STATUS);
+        return PaymentModeUtil.isOfflineQrMode(paymentModeService.getMode().getMode());
+    }
+
+    private Boolean isWechatPayOpen() {
+        return PaymentModeUtil.isWechatOnlineMode(paymentModeService.getMode().getMode());
+    }
+
+    private Boolean isYuePayOpen() {
+        String status = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_YUE_PAY_STATUS);
         return OfflinePayUtil.isConfigOpen(status);
     }
 
@@ -1326,7 +1338,7 @@ public class OrderServiceImpl implements OrderService {
             Integer combinationId = orderInfoVo.getCombinationId();
             OrderInfoDetailVo detailVo = orderInfoVo.getOrderDetailList().get(0);
             StoreCombination storeCombination = storeCombinationService.getByIdException(combinationId);
-            StoreProductAttrValue combinationAttrValue = storeProductAttrValueService.getByIdAndProductIdAndType(detailVo.getAttrValueId(), combinationId, Constants.PRODUCT_TYPE_PINGTUAN);
+            StoreProductAttrValue combinationAttrValue = getCombinationAttrValue(detailVo.getAttrValueId(), storeCombination);
             if (ObjectUtil.isNull(combinationAttrValue)) {
                 throw new CrmebException("拼团商品规格不存在");
             }
@@ -1780,7 +1792,7 @@ public class OrderServiceImpl implements OrderService {
         if (storeCombination.getStock().equals(0) || detailRequest.getProductNum() > storeCombination.getStock()) {
             throw new CrmebException("拼团商品库存不足");
         }
-        StoreProductAttrValue combinationAttrValue = storeProductAttrValueService.getByIdAndProductIdAndType(detailRequest.getAttrValueId(), combinationId, Constants.PRODUCT_TYPE_PINGTUAN);
+        StoreProductAttrValue combinationAttrValue = getCombinationAttrValue(detailRequest.getAttrValueId(), storeCombination);
         if (ObjectUtil.isNull(combinationAttrValue)) {
             throw new CrmebException("拼团商品规格不存在");
         }
@@ -1799,6 +1811,23 @@ public class OrderServiceImpl implements OrderService {
         detailVo.setTempId(storeCombination.getTempId());
         detailVo.setProductType(Constants.PRODUCT_TYPE_PINGTUAN);
         return detailVo;
+    }
+
+    private StoreProductAttrValue getCombinationAttrValue(Integer attrValueId, StoreCombination storeCombination) {
+        StoreProductAttrValue combinationAttrValue = storeProductAttrValueService.getByIdAndProductIdAndType(
+                attrValueId, storeCombination.getId(), Constants.PRODUCT_TYPE_PINGTUAN);
+        if (ObjectUtil.isNotNull(combinationAttrValue)) {
+            return combinationAttrValue;
+        }
+
+        StoreProductAttrValue masterAttrValue = storeProductAttrValueService.getById(attrValueId);
+        if (ObjectUtil.isNull(masterAttrValue)
+                || !storeCombination.getProductId().equals(masterAttrValue.getProductId())
+                || !Constants.PRODUCT_TYPE_NORMAL.equals(masterAttrValue.getType())) {
+            return null;
+        }
+        return storeProductAttrValueService.getByProductIdAndSkuAndType(
+                storeCombination.getId(), masterAttrValue.getSuk(), Constants.PRODUCT_TYPE_PINGTUAN);
     }
 
     /**

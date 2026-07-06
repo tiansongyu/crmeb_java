@@ -9,6 +9,8 @@ crmeb/LOG_HOME_IS_UNDEFINED
 .DS_Store
 __pycache__/
 *.pyc
+artifacts/
+crmeb/crmeb_admin_log/
 
 # Working directories
 .claude/

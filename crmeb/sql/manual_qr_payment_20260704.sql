@@ -87,6 +87,22 @@ FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM `eb_system_config` WHERE `name` = 'offline_pay_status');
 
 UPDATE `eb_system_config`
+SET `title` = '支付模式',
+    `value` = 'offline_qr',
+    `update_time` = NOW()
+WHERE `name` = 'pay_mode';
+
+INSERT INTO `eb_system_config` (`name`, `title`, `form_id`, `value`, `status`, `create_time`, `update_time`)
+SELECT 'pay_mode', '支付模式', 103, 'offline_qr', 0, NOW(), NOW()
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `eb_system_config` WHERE `name` = 'pay_mode');
+
+UPDATE `eb_system_config`
+SET `value` = '''0''',
+    `update_time` = NOW()
+WHERE `name` = 'pay_weixin_open';
+
+UPDATE `eb_system_config`
 SET `title` = '线下扫码转账收款码',
     `form_id` = 79,
     `update_time` = NOW()

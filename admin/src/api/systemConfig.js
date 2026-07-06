@@ -178,6 +178,27 @@ export function clearCacheApi() {
 }
 
 /**
+ * @description 获取支付模式
+ */
+export function getPaymentModeApi() {
+  return request({
+    url: '/admin/system/config/payment/mode',
+    method: 'GET',
+  });
+}
+
+/**
+ * @description 切换支付模式
+ */
+export function switchPaymentModeApi(data) {
+  return request({
+    url: '/admin/system/config/payment/mode/switch',
+    method: 'POST',
+    data,
+  });
+}
+
+/**
  * @description 获取主题色
  */
 export function changeColorApi() {

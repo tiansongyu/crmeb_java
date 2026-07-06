@@ -1,6 +1,7 @@
 {
   "scripts": {
     "patch:uni": "node scripts/patch-uni-vue-loader.js",
+    "prebuild:h5": "npm run patch:uni",
     "build:h5": "cross-env NODE_ENV=production UNI_PLATFORM=h5 UNI_CLI_CONTEXT=. UNI_INPUT_DIR=. UNI_OUTPUT_DIR=unpackage/dist/build/h5 vue-cli-service uni-build"
   },
   "dependencies": {
@@ -26,7 +27,7 @@
     "@vue/cli-service": "4.5.19",
     "copy-webpack-plugin": "5.1.2",
     "cross-env": "7.0.3",
-    "node-sass": "4.14.1",
+    "sass": "1.32.13",
     "sass-loader": "10.1.1",
     "vue-template-compiler": "2.6.14"
   }

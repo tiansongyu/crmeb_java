@@ -363,7 +363,7 @@
 					overflow: hidden;
 				}
 
-				/deep/ .easy-loadimage,
+				::v-deep .easy-loadimage,
 				uni-image,
 				.easy-loadimage {
 					width: 90rpx;

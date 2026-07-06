@@ -57,7 +57,7 @@
 								<view class='label acea-row row-between-wrapper'>
 									<view class='stock skeleton-rect'>类型：{{storeInfo.people || 0}}人团</view>
 									<view class="skeleton-rect">累计销量：{{parseFloat(storeInfo.sales)  + parseFloat(storeInfo.ficti)}} {{storeInfo.unitName || ''}}</view>
-									<view class="skeleton-rect">限购: {{ attribute.productSelect.quotaShow ? attribute.productSelect.quotaShow : 0 }}
+									<view class="skeleton-rect">限量: {{ currentQuotaShow }}
 										{{storeInfo.unitName || ''}}
 									</view>
 								</view>
@@ -291,8 +291,9 @@
 			<view class="share-box" v-if="H5ShareBox">
 				<image src="/static/images/share-info.png" @click="H5ShareBox = false"></image>
 			</view>
-			<product-window :attr='attribute' :limitNum='1' @myevent="onMyEvent" @ChangeAttr="ChangeAttr"
-				@ChangeCartNum="ChangeCartNum" @iptCartNum="iptCartNum" @attrVal="attrVal"  @getImg="showImg"></product-window>
+			<product-window :attr='attribute' :onceNum="onceNum" :limitNum='1' :iScart='1' confirmText="立即开团"
+				@myevent="onMyEvent" @ChangeAttr="ChangeAttr" @ChangeCartNum="ChangeCartNum"
+				@iptCartNum="iptCartNum" @attrVal="attrVal" @goCat="goCat" @getImg="showImg"></product-window>
 		</view>	
 
 	</view>
@@ -340,12 +341,27 @@
 			userEvaluation,
 			countDown
 		},
-		computed: mapGetters({
-			'isLogin': 'isLogin',
-			'userInfo': 'userInfo',
-			'uid': 'uid',
-			'chatUrl': 'chatUrl'
-		}),
+		computed: {
+			...mapGetters({
+				'isLogin': 'isLogin',
+				'userInfo': 'userInfo',
+				'uid': 'uid',
+				'chatUrl': 'chatUrl'
+			}),
+			currentQuotaShow() {
+				const productSelect = this.attribute.productSelect || {};
+				if (productSelect.quotaShow !== undefined && productSelect.quotaShow !== null && productSelect.quotaShow !== '') {
+					return productSelect.quotaShow;
+				}
+				if (productSelect.quota !== undefined && productSelect.quota !== null && productSelect.quota !== '') {
+					return productSelect.quota;
+				}
+				if (this.storeInfo.quotaShow !== undefined && this.storeInfo.quotaShow !== null && this.storeInfo.quotaShow !== '') {
+					return this.storeInfo.quotaShow;
+				}
+				return this.storeInfo.quota || 0;
+			}
+		},
 		data() {
 			return {
 				urlDomain: this.$Cache.get("imgHost"),
@@ -755,6 +771,7 @@
 					self.$set(self.attribute.productSelect, "unique", productSelect.id);
 					self.$set(self.attribute.productSelect, "quota", productSelect.quota);
 					self.$set(self.attribute.productSelect, "quotaShow", productSelect.quotaShow);
+					self.$set(self.attribute.productSelect, "stock", productSelect.stock);
 					self.$set(self.attribute.productSelect, "cart_num", 1);
 					this.$set(this, "attrValue", value.join(","));
 					this.$set(this, "attrTxt", "已选择");
@@ -764,6 +781,7 @@
 					self.$set(self.attribute.productSelect, "price", self.storeInfo.price);
 					self.$set(self.attribute.productSelect, "quota", 0);
 					self.$set(self.attribute.productSelect, "quotaShow", 0);
+					self.$set(self.attribute.productSelect, "stock", 0);
 					self.$set(self.attribute.productSelect, "unique", "");
 					self.$set(self.attribute.productSelect, "cart_num", 0);
 					self.$set(self, "attrValue", "");
@@ -773,6 +791,7 @@
 					self.$set(self.attribute.productSelect, "image", self.storeInfo.image);
 					self.$set(self.attribute.productSelect, "price", self.storeInfo.price);
 					self.$set(self.attribute.productSelect, "quota", self.storeInfo.quota);
+					self.$set(self.attribute.productSelect, "stock", self.storeInfo.stock || self.storeInfo.quota || 0);
 					let uniId = self.skuArr[0].id;
 					self.$set(self.attribute.productSelect,"unique", uniId);
 					self.$set(self.attribute.productSelect, "cart_num", 1);
@@ -885,6 +904,7 @@
 					this.$set(this.attribute.productSelect, "cart_num", 1);
 					this.$set(this.attribute.productSelect, "quota", productSelect.quota);
 					this.$set(this.attribute.productSelect, "quotaShow", productSelect.quotaShow);
+					this.$set(this.attribute.productSelect, "stock", productSelect.stock);
 					this.$set(this, "attrValue", res);
 
 					this.attrTxt = "已选择"
@@ -895,6 +915,7 @@
 					this.$set(this.attribute.productSelect, "cart_num", 0);
 					this.$set(this.attribute.productSelect, "quota", 0);
 					this.$set(this.attribute.productSelect, "quotaShow", 0);
+					this.$set(this.attribute.productSelect, "stock", 0);
 					this.$set(this, "attrValue", "");
 					this.attrTxt = "已选择"
 				}

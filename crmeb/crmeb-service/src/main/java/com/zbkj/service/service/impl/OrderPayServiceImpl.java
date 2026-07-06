@@ -28,9 +28,11 @@ import com.zbkj.common.request.OfflinePayProofRequest;
 import com.zbkj.common.request.OrderPayRequest;
 import com.zbkj.common.response.OrderPayResultResponse;
 import com.zbkj.common.response.PayConfigResponse;
+import com.zbkj.common.response.PaymentModeResponse;
 import com.zbkj.common.utils.CrmebUtil;
 import com.zbkj.common.utils.CrmebDateUtil;
 import com.zbkj.common.utils.OfflinePayUtil;
+import com.zbkj.common.utils.PaymentModeUtil;
 import com.zbkj.common.utils.RedisUtil;
 import com.zbkj.common.utils.SecurityUtil;
 import com.zbkj.common.utils.WxPayUtil;
@@ -121,6 +123,9 @@ public class OrderPayServiceImpl implements OrderPayService {
     private SystemConfigService systemConfigService;
 
     @Autowired
+    private PaymentModeService paymentModeService;
+
+    @Autowired
     private StoreProductService storeProductService;
 
     @Autowired
@@ -176,10 +181,16 @@ public class OrderPayServiceImpl implements OrderPayService {
      */
     @Override
     public PayConfigResponse getPayConfig() {
+        PaymentModeResponse paymentMode = paymentModeService.getMode();
+        String yuePayStatus = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_YUE_PAY_STATUS);
         PayConfigResponse response = new PayConfigResponse();
-        response.setYuePayStatus(false);
-        response.setPayWechatOpen(false);
+        response.setYuePayStatus(OfflinePayUtil.isConfigOpen(yuePayStatus));
+        response.setPayWechatOpen(PaymentModeUtil.isWechatOnlineMode(paymentMode.getMode()));
         response.setUserBalance(BigDecimal.ZERO);
+        if (response.getYuePayStatus()) {
+            User user = userService.getInfo();
+            response.setUserBalance(user.getNowMoney());
+        }
         fillOfflinePayConfig(response);
         return response;
     }
@@ -700,15 +711,26 @@ public class OrderPayServiceImpl implements OrderPayService {
         User user = userService.getById(storeOrder.getUid());
         if (ObjectUtil.isNull(user)) throw new CrmebException("用户不存在");
 
-        if (!PayConstants.PAY_TYPE_OFFLINE.equals(orderPayRequest.getPayType())) {
-            throw new CrmebException("当前版本仅支持扫码转账支付");
+        if (PayConstants.PAY_TYPE_OFFLINE.equals(orderPayRequest.getPayType())) {
+            return offlinePayment(storeOrder, user);
         }
+
+        if (PayConstants.PAY_TYPE_YUE.equals(orderPayRequest.getPayType())) {
+            return yuePayment(orderPayRequest, storeOrder, user);
+        }
+
+        if (PayConstants.PAY_TYPE_WE_CHAT.equals(orderPayRequest.getPayType())) {
+            return wechatPayment(orderPayRequest, storeOrder, user, ip);
+        }
+
+        throw new CrmebException("暂不支持该支付方式");
+    }
+
+    private OrderPayResultResponse offlinePayment(StoreOrder storeOrder, User user) {
         if (!isOfflinePayOpen()) {
             throw new CrmebException("扫码转账支付未开启");
         }
-        if (user.getIntegral() < storeOrder.getUseIntegral()) {
-            throw new CrmebException("用户积分不足");
-        }
+        validateUserIntegral(user, storeOrder);
 
         storeOrder.setPayType(PayConstants.PAY_TYPE_OFFLINE);
         storeOrder.setIsChannel(8);
@@ -729,6 +751,108 @@ public class OrderPayServiceImpl implements OrderPayService {
         response.setOfflinePayStatusText(OfflinePayUtil.getStatusText(storeOrder.getOfflinePayStatus()));
         fillOfflinePayConfig(response);
         return response;
+    }
+
+    private OrderPayResultResponse yuePayment(OrderPayRequest orderPayRequest, StoreOrder storeOrder, User user) {
+        if (!isYuePayOpen()) {
+            throw new CrmebException("余额支付未开启");
+        }
+        if (user.getNowMoney().compareTo(storeOrder.getPayPrice()) < 0) {
+            throw new CrmebException("用户余额不足");
+        }
+        storeOrder.setPayType(orderPayRequest.getPayType());
+        storeOrder.setIsChannel(3);
+        storeOrder.setUpdateTime(DateUtil.date());
+        boolean changePayType = storeOrderService.updateById(storeOrder);
+        if (!changePayType) {
+            throw new CrmebException("变更订单支付类型失败!");
+        }
+        validateUserIntegral(user, storeOrder);
+
+        OrderPayResultResponse response = new OrderPayResultResponse();
+        response.setOrderNo(storeOrder.getOrderId());
+        response.setPayType(storeOrder.getPayType());
+        if (storeOrder.getPayPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            Boolean zeroBoolean = yuePay(storeOrder);
+            response.setPayType(PayConstants.PAY_TYPE_YUE);
+            response.setStatus(zeroBoolean);
+            return response;
+        }
+        Boolean yueBoolean = yuePay(storeOrder);
+        response.setStatus(yueBoolean);
+        return response;
+    }
+
+    private OrderPayResultResponse wechatPayment(OrderPayRequest orderPayRequest, StoreOrder storeOrder, User user, String ip) {
+        if (!isWechatPayOpen()) {
+            throw new CrmebException("微信在线支付未开启");
+        }
+        storeOrder.setPayType(orderPayRequest.getPayType());
+        switch (orderPayRequest.getPayChannel()) {
+            case PayConstants.PAY_CHANNEL_WE_CHAT_H5:
+                storeOrder.setIsChannel(2);
+                break;
+            case PayConstants.PAY_CHANNEL_WE_CHAT_PUBLIC:
+                storeOrder.setIsChannel(0);
+                break;
+            case PayConstants.PAY_CHANNEL_WE_CHAT_PROGRAM:
+                storeOrder.setIsChannel(1);
+                break;
+            case PayConstants.PAY_CHANNEL_WE_CHAT_APP_IOS:
+                storeOrder.setIsChannel(4);
+                break;
+            case PayConstants.PAY_CHANNEL_WE_CHAT_APP_ANDROID:
+                storeOrder.setIsChannel(5);
+                break;
+            default:
+                throw new CrmebException("暂不支持该微信支付渠道");
+        }
+        storeOrder.setPayType(PayConstants.PAY_TYPE_WE_CHAT);
+        storeOrder.setUpdateTime(DateUtil.date());
+        boolean changePayType = storeOrderService.updateById(storeOrder);
+        if (!changePayType) {
+            throw new CrmebException("变更订单支付类型失败!");
+        }
+        validateUserIntegral(user, storeOrder);
+
+        OrderPayResultResponse response = new OrderPayResultResponse();
+        response.setOrderNo(storeOrder.getOrderId());
+        response.setPayType(storeOrder.getPayType());
+        if (storeOrder.getPayPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            Boolean zeroBoolean = yuePay(storeOrder);
+            response.setPayType(PayConstants.PAY_TYPE_YUE);
+            response.setStatus(zeroBoolean);
+            return response;
+        }
+
+        Map<String, String> unifiedorder = unifiedorder(storeOrder, ip);
+        response.setStatus(true);
+
+        WxPayJsResultVo vo = new WxPayJsResultVo();
+        vo.setAppId(unifiedorder.get("appId"));
+        vo.setNonceStr(unifiedorder.get("nonceStr"));
+        vo.setPackages(unifiedorder.get("package"));
+        vo.setSignType(unifiedorder.get("signType"));
+        vo.setTimeStamp(unifiedorder.get("timeStamp"));
+        vo.setPaySign(unifiedorder.get("paySign"));
+        if (storeOrder.getIsChannel() == 2) {
+            vo.setMwebUrl(unifiedorder.get("mweb_url"));
+            response.setPayType(PayConstants.PAY_CHANNEL_WE_CHAT_H5);
+        }
+        if (storeOrder.getIsChannel() == 4 || storeOrder.getIsChannel() == 5) {
+            vo.setPartnerid(unifiedorder.get("partnerid"));
+        }
+        storeOrder.setOutTradeNo(unifiedorder.get("outTradeNo"));
+        storeOrder.setUpdateTime(DateUtil.date());
+        storeOrderService.updateById(storeOrder);
+        response.setJsConfig(vo);
+        return response;
+    }
+
+    private void validateUserIntegral(User user, StoreOrder storeOrder) {
+        if (user.getIntegral() < storeOrder.getUseIntegral()) {
+            throw new CrmebException("用户积分不足");
+        }
     }
 
     /**
@@ -929,7 +1053,15 @@ public class OrderPayServiceImpl implements OrderPayService {
     }
 
     private Boolean isOfflinePayOpen() {
-        String status = systemConfigService.getValueByKey(OfflinePayConstants.CONFIG_OFFLINE_PAY_STATUS);
+        return PaymentModeUtil.isOfflineQrMode(paymentModeService.getMode().getMode());
+    }
+
+    private Boolean isWechatPayOpen() {
+        return PaymentModeUtil.isWechatOnlineMode(paymentModeService.getMode().getMode());
+    }
+
+    private Boolean isYuePayOpen() {
+        String status = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_YUE_PAY_STATUS);
         return OfflinePayUtil.isConfigOpen(status);
     }
 

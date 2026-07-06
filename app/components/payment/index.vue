@@ -68,7 +68,32 @@
 			},
 			payConfig() {
 				getOrderPayConfig().then(res => {
-					this.payMode[0].payStatus = res.data.offlinePayStatus ? 1 : 0;
+					const data = res.data || {};
+					if (data.offlinePayStatus) {
+						this.payMode[0].name = '扫码转账';
+						this.payMode[0].icon = 'icon-yuezhifu1';
+						this.payMode[0].value = 'offline';
+						this.payMode[0].title = data.offlinePayTips || '上传付款凭证后等待确认';
+						this.payMode[0].payStatus = 1;
+						return;
+					}
+					if (data.payWechatOpen) {
+						this.payMode[0].name = '微信支付';
+						this.payMode[0].icon = 'icon-weixin2';
+						this.payMode[0].value = 'weixin';
+						this.payMode[0].title = '微信在线支付';
+						this.payMode[0].payStatus = 1;
+						return;
+					}
+					if (data.yuePayStatus) {
+						this.payMode[0].name = '余额支付';
+						this.payMode[0].icon = 'icon-yuezhifu';
+						this.payMode[0].value = 'yue';
+						this.payMode[0].title = '使用账户余额支付';
+						this.payMode[0].payStatus = 1;
+						return;
+					}
+					this.payMode[0].payStatus = 0;
 				});
 			},
 			goPay() {

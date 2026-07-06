@@ -1,10 +1,13 @@
 package com.zbkj.admin.controller;
 
 import com.zbkj.common.model.system.SystemConfig;
+import com.zbkj.common.request.PaymentModeSwitchRequest;
 import com.zbkj.common.request.SaveConfigRequest;
 import com.zbkj.common.request.SystemFormCheckRequest;
 import com.zbkj.common.response.AdminSiteLogoResponse;
+import com.zbkj.common.response.PaymentModeResponse;
 import com.zbkj.common.result.CommonResult;
+import com.zbkj.service.service.PaymentModeService;
 import com.zbkj.service.service.SystemConfigService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -37,6 +40,9 @@ public class SystemConfigController {
 
     @Autowired
     private SystemConfigService systemConfigService;
+
+    @Autowired
+    private PaymentModeService paymentModeService;
 
     @PreAuthorize("hasAuthority('admin:system:config:info')")
     @ApiOperation(value = "表单详情")
@@ -126,7 +132,18 @@ public class SystemConfigController {
         }
         return CommonResult.failed("清除失败");
     }
-}
 
+    @ApiOperation(value = "获取支付模式")
+    @RequestMapping(value = "/payment/mode", method = RequestMethod.GET)
+    public CommonResult<PaymentModeResponse> getPaymentMode() {
+        return CommonResult.success(paymentModeService.getMode());
+    }
+
+    @ApiOperation(value = "切换支付模式")
+    @RequestMapping(value = "/payment/mode/switch", method = RequestMethod.POST)
+    public CommonResult<PaymentModeResponse> switchPaymentMode(@RequestBody @Validated PaymentModeSwitchRequest request) {
+        return CommonResult.success(paymentModeService.switchMode(request));
+    }
+}
 
 

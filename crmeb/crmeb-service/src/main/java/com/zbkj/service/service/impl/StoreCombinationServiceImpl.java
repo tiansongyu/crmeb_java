@@ -553,8 +553,8 @@ public class StoreCombinationServiceImpl extends ServiceImpl<StoreCombinationDao
         infoResponse.setFicti(storeProduct.getFicti());
         detailResponse.setStoreCombination(infoResponse);
 
-        // 获取拼团商品规格
-        List<StoreProductAttr> attrList = storeProductAttrService.getListByProductIdAndType(comId, Constants.PRODUCT_TYPE_PINGTUAN);
+        // 获取拼团商品规格，历史活动缺失活动规格时回退主商品规格
+        List<StoreProductAttr> attrList = getCombinationSkuAttrList(storeCombination);
         // 根据制式设置attr属性
 //        List<ProductAttrResponse> skuAttr = getSkuAttr(attrList);
         detailResponse.setProductAttr(attrList);
@@ -758,39 +758,7 @@ public class StoreCombinationServiceImpl extends ServiceImpl<StoreCombinationDao
         StoreCombinationResponse detailResponse = new StoreCombinationResponse();
         BeanUtils.copyProperties(storeCombination, detailResponse);
         detailResponse.setSpecType(false);
-        // sku部分
-        StoreProductAttr spavAttr = new StoreProductAttr();
-        spavAttr.setProductId(storeCombination.getId());
-        spavAttr.setType(Constants.PRODUCT_TYPE_PINGTUAN);
-        List<StoreProductAttr> attrList = storeProductAttrService.getByEntity(spavAttr);
-        List<HashMap<String, Object>> skuAttrList = getSkuAttrList(attrList);
-        detailResponse.setProductAttr(skuAttrList);
-        if (CollUtil.isNotEmpty(attrList) && attrList.size() > 1) {
-            detailResponse.setSpecType(true);
-        }
-        // 单属性时讲attrValueId 赋值给外层方便前端使用
-        if (!detailResponse.getSpecType()) {
-            detailResponse.setAloneAttrValueId(attrList.get(0).getId());
-        }
-
-
-        StoreProductAttrValue spavValue = new StoreProductAttrValue();
-        spavValue.setProductId(storeCombination.getId());
-        spavValue.setType(Constants.PRODUCT_TYPE_PINGTUAN);
-        List<StoreProductAttrValue> valueList = storeProductAttrValueService.getByEntity(spavValue);
-        // H5 端用于生成skuList
-        List<StoreProductAttrValueResponse> sPAVResponses = new ArrayList<>();
-        for (StoreProductAttrValue storeProductAttrValue : valueList) {
-            StoreProductAttrValueResponse atr = new StoreProductAttrValueResponse();
-            BeanUtils.copyProperties(storeProductAttrValue, atr);
-            sPAVResponses.add(atr);
-        }
-        HashMap<String, Object> skuMap = new HashMap<>();
-        for (StoreProductAttrValueResponse attrValue : sPAVResponses) {
-            skuMap.put(attrValue.getSuk(), attrValue);
-        }
-
-        detailResponse.setProductValue(skuMap);
+        fillGoPinkSku(detailResponse, storeCombination);
         goPinkResponse.setStoreCombination(detailResponse);
         return goPinkResponse;
     }
@@ -1108,6 +1076,61 @@ public class StoreCombinationServiceImpl extends ServiceImpl<StoreCombinationDao
         }
 
         return true;
+    }
+
+    /**
+     * 去拼团页需要可用规格。部分历史活动没有生成拼团规格，回退主商品规格避免页面崩溃。
+     */
+    private void fillGoPinkSku(StoreCombinationResponse detailResponse, StoreCombination storeCombination) {
+        List<StoreProductAttr> attrList = getCombinationSkuAttrList(storeCombination);
+        detailResponse.setProductAttr(getSkuAttrList(attrList));
+        detailResponse.setSpecType(CollUtil.isNotEmpty(attrList) && attrList.size() > 1);
+        // 单属性时将attrValueId赋值给外层方便前端使用
+        if (!detailResponse.getSpecType() && CollUtil.isNotEmpty(attrList)) {
+            detailResponse.setAloneAttrValueId(attrList.get(0).getId());
+        }
+
+        HashMap<String, Object> skuMap = new HashMap<>();
+        for (StoreProductAttrValue attrValue : getCombinationSkuValueList(storeCombination)) {
+            StoreProductAttrValueResponse response = new StoreProductAttrValueResponse();
+            BeanUtils.copyProperties(attrValue, response);
+            skuMap.put(response.getSuk(), response);
+        }
+        detailResponse.setProductValue(skuMap);
+    }
+
+    private List<StoreProductAttr> getCombinationSkuAttrList(StoreCombination storeCombination) {
+        StoreProductAttr spavAttr = new StoreProductAttr();
+        spavAttr.setProductId(storeCombination.getId());
+        spavAttr.setType(Constants.PRODUCT_TYPE_PINGTUAN);
+        List<StoreProductAttr> attrList = storeProductAttrService.getByEntity(spavAttr);
+        if (CollUtil.isNotEmpty(attrList)) {
+            return attrList;
+        }
+        return storeProductAttrService.getListByProductIdAndType(storeCombination.getProductId(), Constants.PRODUCT_TYPE_NORMAL);
+    }
+
+    private List<StoreProductAttrValue> getCombinationSkuValueList(StoreCombination storeCombination) {
+        StoreProductAttrValue spavValue = new StoreProductAttrValue();
+        spavValue.setProductId(storeCombination.getId());
+        spavValue.setType(Constants.PRODUCT_TYPE_PINGTUAN);
+        List<StoreProductAttrValue> combinationValues = storeProductAttrValueService.getByEntity(spavValue);
+        List<StoreProductAttrValue> masterValues = storeProductAttrValueService.getListByProductIdAndType(
+                storeCombination.getProductId(),
+                Constants.PRODUCT_TYPE_NORMAL
+        );
+        if (CollUtil.isEmpty(masterValues)) {
+            return CollUtil.isEmpty(combinationValues) ? new ArrayList<>() : combinationValues;
+        }
+        if (CollUtil.isEmpty(combinationValues)) {
+            return masterValues;
+        }
+        return masterValues.stream().map(masterValue -> {
+            List<StoreProductAttrValue> valueList = combinationValues.stream()
+                    .filter(combinationValue -> masterValue.getSuk().equals(combinationValue.getSuk()))
+                    .collect(Collectors.toList());
+            return CollUtil.isEmpty(valueList) ? masterValue : valueList.get(0);
+        }).collect(Collectors.toList());
     }
 
     /**

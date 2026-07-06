@@ -20,6 +20,7 @@ services:
       - ./crmeb/sql/Crmeb_v1.4.sql:/docker-entrypoint-initdb.d/01-crmeb.sql:ro
       - ./docker/mysql/02-quartz-case.sql:/docker-entrypoint-initdb.d/02-quartz-case.sql:ro
       - ./crmeb/sql/manual_qr_payment_20260704.sql:/docker-entrypoint-initdb.d/03-manual-qr-payment.sql:ro
+      - ./crmeb/sql/activity_sku_repair_20260705.sql:/docker-entrypoint-initdb.d/04-activity-sku-repair.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root123456}"]
       interval: 10s
@@ -59,7 +60,7 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES: "true"
       SPRING_MAIN_LAZY_INITIALIZATION: "true"
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-crmeb}?characterEncoding=utf-8&useSSL=false&serverTimeZone=GMT+8
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-crmeb}?characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-crmeb}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-crmeb123}
       SPRING_REDIS_HOST: redis
@@ -91,7 +92,7 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES: "true"
       SPRING_MAIN_LAZY_INITIALIZATION: "true"
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-crmeb}?characterEncoding=utf-8&useSSL=false&serverTimeZone=GMT+8
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-crmeb}?characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-crmeb}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-crmeb123}
       SPRING_REDIS_HOST: redis

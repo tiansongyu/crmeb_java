@@ -33,7 +33,7 @@
 						<view class="title">{{ item.attrName }}</view>
 						<view class="listn acea-row row-middle">
 							<view class="itemn" :class="item.index === itemn ? 'on' : ''"
-								v-for="(itemn, indexn) in item.attrValues" @click="tapAttr(indexw, indexn)"
+								v-for="(itemn, indexn) in item.attrValues" @tap.stop="tapAttr(indexw, indexn)"
 								:key="indexn">
 								{{ itemn }}
 							</view>
@@ -65,7 +65,7 @@
 				@click="goCat">我要参团</view>
 			<view class="joinBnt on"
 				v-else-if="(iSbnt && attr.productSelect.quota<=0)||(iSbnt &&attr.productSelect.stock<=0)">已售罄</view>
-			<view class="joinBnt bg_color" v-if="iScart && attr.productSelect.stock" @click="goCat">确定</view>
+			<view class="joinBnt bg_color" v-if="iScart && attr.productSelect.stock" @click="goCat">{{ confirmText }}</view>
 			<!-- <view class="joinBnt bg-color" v-if="iSbnt && attr.productSelect.stock && attr.productSelect.quota" @click="goCat">确定</view> -->
 			<view class="joinBnt on" v-else-if="(iScart && !attr.productSelect.stock)">已售罄</view>
 		</view>
@@ -104,6 +104,10 @@
 			iScart: {
 				type: Number,
 				value: 0
+			},
+			confirmText: {
+				type: String,
+				default: '确定'
 			}
 		},
 		data() {
@@ -168,10 +172,14 @@
 		position: fixed;
 		bottom: 0;
 		width: 100%;
+		max-height: 88vh;
 		left: 0;
 		background-color: #fff;
 		z-index: 77;
 		border-radius: 16rpx 16rpx 0 0;
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
 		padding-bottom: 100rpx;
 		padding-bottom: calc(env(safe-area-inset-bottom) + 100rpx);
 		transform: translate3d(0, 100%, 0);
@@ -239,9 +247,14 @@
 	}
 
 	.product-window .rollTop {
-		max-height: 62vh; 
-		overflow: auto;
+		flex: 1;
+		min-height: 0;
+		max-height: 62vh;
+		overflow-y: auto;
 		margin-top: 36rpx;
+		-webkit-overflow-scrolling: touch;
+		overscroll-behavior: contain;
+		touch-action: pan-y;
 	}
 
 	.product-window .productWinList .item~.item {
@@ -266,6 +279,8 @@
 		border-radius: 40rpx;
 		margin: 20rpx 0 0 14rpx;
 		background-color: #F2F2F2;
+		cursor: pointer;
+		user-select: none;
 	}
 
 	.product-window .productWinList .item .listn .itemn.on {

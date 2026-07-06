@@ -27,16 +27,7 @@ import Cache from '../../utils/cache';
 import {
 	USER_INFO
 } from '../../config/cache';
-let cartArr = [{
-	name: "扫码转账",
-	icon: "icon-yuezhifu1",
-	value: 'offline',
-	title: '上传付款凭证后等待确认',
-	payStatus: 1,
-	offlinePayQrcode: '',
-	offlinePayName: '',
-	offlinePayTips: ''
-}];
+let cartArr = [];
 const state = {
 	token: Cache.get(LOGIN_STATUS) || '',
 	backgroundColor: "#fff",
@@ -131,10 +122,38 @@ const actions = {
 		return new Promise(reslove => {
 			getOrderPayConfig().then(res => {
 				let data = res.data;
-				cartArr[0].payStatus = data.offlinePayStatus ? 1 : 0;
-				cartArr[0].offlinePayQrcode = data.offlinePayQrcode || '';
-				cartArr[0].offlinePayName = data.offlinePayName || '';
-				cartArr[0].offlinePayTips = data.offlinePayTips || '';
+				cartArr = [];
+				if (data.offlinePayStatus) {
+					cartArr.push({
+						name: "扫码转账",
+						icon: "icon-yuezhifu1",
+						value: 'offline',
+						title: data.offlinePayTips || '上传付款凭证后等待确认',
+						payStatus: 1,
+						offlinePayQrcode: data.offlinePayQrcode || '',
+						offlinePayName: data.offlinePayName || '',
+						offlinePayTips: data.offlinePayTips || ''
+					});
+				}
+				if (data.payWechatOpen) {
+					cartArr.push({
+						name: "微信支付",
+						icon: "icon-weixin2",
+						value: 'weixin',
+						title: '微信快捷支付',
+						payStatus: 1
+					});
+				}
+				if (data.yuePayStatus) {
+					cartArr.push({
+						name: "余额支付",
+						icon: "icon-yuezhifu",
+						value: 'yue',
+						title: '可用余额:',
+						payStatus: 1,
+						userBalance: data.userBalance || 0
+					});
+				}
 				let cartArrs = cartArr.filter(e => e.payStatus === 1);
 				reslove({
 					userBalance: data.userBalance,

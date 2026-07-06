@@ -539,6 +539,9 @@ public class StoreBargainServiceImpl extends ServiceImpl<StoreBargainDao, StoreB
 
         List<StoreProductAttrValue> storeProductAttrValuesBargain = attrValueService.getListByProductIdAndType(id, ProductConstants.PRODUCT_TYPE_BARGAIN);
         if (CollUtil.isEmpty(storeProductAttrValuesBargain)) {
+            storeProductAttrValuesBargain = attrValueService.getListByProductIdAndType(storeBargain.getProductId(), Constants.PRODUCT_TYPE_NORMAL);
+        }
+        if (CollUtil.isEmpty(storeProductAttrValuesBargain)) {
             throw new CrmebException("砍价商品规格属性值未找到");
         }
         StoreProductAttrValue productAttrValue = storeProductAttrValuesBargain.get(0);
@@ -922,4 +925,3 @@ public class StoreBargainServiceImpl extends ServiceImpl<StoreBargainDao, StoreB
     }
 
 }
-

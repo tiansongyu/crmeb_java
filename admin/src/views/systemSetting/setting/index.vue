@@ -1,5 +1,51 @@
 <template>
   <div class="divBox">
+    <el-card v-if="showPaymentModePanel" class="payment-mode-card" shadow="never" v-loading="paymentModeLoading">
+      <div class="payment-mode-header">
+        <div>
+          <div class="payment-mode-title">
+            支付模式
+            <el-tag size="mini" :type="paymentMode.mode === 'wechat_online' ? 'success' : 'warning'">
+              {{ paymentMode.modeName || '-' }}
+            </el-tag>
+          </div>
+          <div class="payment-mode-desc">扫码转账和微信在线支付保持互斥，切换时会同步更新旧支付开关配置。</div>
+        </div>
+        <el-button-group>
+          <el-button
+            icon="el-icon-refresh"
+            :type="paymentMode.mode === 'offline_qr' ? 'primary' : 'default'"
+            :loading="paymentModeSwitching"
+            :disabled="paymentMode.mode === 'offline_qr'"
+            @click="switchPaymentMode('offline_qr')"
+          >
+            扫码转账
+          </el-button>
+          <el-button
+            icon="el-icon-connection"
+            :type="paymentMode.mode === 'wechat_online' ? 'primary' : 'default'"
+            :loading="paymentModeSwitching"
+            :disabled="paymentMode.mode === 'wechat_online'"
+            @click="switchPaymentMode('wechat_online')"
+          >
+            微信在线支付
+          </el-button>
+        </el-button-group>
+      </div>
+      <div class="payment-mode-status">
+        <span>收款码：{{ paymentMode.offlinePayReady ? '已配置' : '未配置' }}</span>
+        <span>微信参数：{{ paymentMode.wechatPayReady ? '已配置' : '未配置' }}</span>
+      </div>
+      <el-alert
+        v-for="(warning, index) in paymentMode.warnings"
+        :key="index"
+        class="payment-mode-warning"
+        :title="warning"
+        type="warning"
+        show-icon
+        :closable="false"
+      />
+    </el-card>
     <el-card class="box-card">
       <el-tabs
         v-model="activeNamel1"
@@ -74,11 +120,29 @@ export default {
       currentEditId: null,
       currentEditData: null,
       currentSelectedUploadFlag: null,
+      paymentModeLoading: false,
+      paymentModeSwitching: false,
+      paymentMode: {
+        mode: '',
+        modeName: '',
+        offlinePayReady: false,
+        wechatPayReady: false,
+        warnings: [],
+      },
     };
   },
   mounted() {
     this.handlerGetTreeList();
     this.getCurrentUploadSelectedFlag();
+    this.getPaymentMode();
+  },
+  computed: {
+    currentTopTab() {
+      return this.treeList.find((item) => item.id.toString() === this.activeNamel1);
+    },
+    showPaymentModePanel() {
+      return this.currentTopTab && this.currentTopTab.name === '支付配置';
+    },
   },
   methods: {
     checkPermi,
@@ -209,11 +273,93 @@ export default {
         this.currentSelectedUploadFlag = parseInt(data);
       });
     },
+    getPaymentMode() {
+      this.paymentModeLoading = true;
+      systemConfigApi
+        .getPaymentModeApi()
+        .then((data) => {
+          this.paymentMode = Object.assign(
+            {
+              mode: '',
+              modeName: '',
+              offlinePayReady: false,
+              wechatPayReady: false,
+              warnings: [],
+            },
+            data || {},
+          );
+          if (!Array.isArray(this.paymentMode.warnings)) this.paymentMode.warnings = [];
+        })
+        .finally(() => {
+          this.paymentModeLoading = false;
+        });
+    },
+    switchPaymentMode(mode) {
+      const targetName = mode === 'wechat_online' ? '微信在线支付' : '扫码转账';
+      this.$confirm(`确认切换到${targetName}？切换后另一种支付方式会自动关闭。`, '支付模式切换', {
+        confirmButtonText: '确认切换',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }).then(() => {
+        this.paymentModeSwitching = true;
+        systemConfigApi
+          .switchPaymentModeApi({ mode })
+          .then((data) => {
+            this.paymentMode = Object.assign({}, this.paymentMode, data || {});
+            if (!Array.isArray(this.paymentMode.warnings)) this.paymentMode.warnings = [];
+            this.$message.success('支付模式切换成功');
+            if (this.currentEditId) {
+              this.handlerGetSettingInfo(this.currentEditId, this.formConfChild.render ? 2 : 1);
+            }
+          })
+          .finally(() => {
+            this.paymentModeSwitching = false;
+          });
+      }).catch(() => {});
+    },
   },
 };
 </script>
 
 <style scoped lang="scss">
+.payment-mode-card {
+  margin-bottom: 16px;
+}
+
+.payment-mode-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.payment-mode-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.payment-mode-desc {
+  margin-top: 8px;
+  color: #909399;
+  font-size: 13px;
+}
+
+.payment-mode-status {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  color: #606266;
+  font-size: 13px;
+}
+
+.payment-mode-warning {
+  margin-top: 12px;
+}
+
 ::v-deep .tab-content .el-tabs__header {
   margin-bottom: 20px !important;
 }

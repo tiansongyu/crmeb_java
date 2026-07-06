@@ -7520,7 +7520,7 @@ INSERT INTO `eb_system_config` VALUES (4410, 'bastInfo', 'bastInfo', 133, 'asda 
 INSERT INTO `eb_system_config` VALUES (4411, 'firstInfo', 'firstInfo', 133, '1', 0, '2021-02-23 14:58:53', '2021-02-23 14:58:53');
 INSERT INTO `eb_system_config` VALUES (4412, 'salesInfo', 'salesInfo', 133, '1', 0, '2021-02-23 14:58:53', '2021-02-23 14:58:53');
 INSERT INTO `eb_system_config` VALUES (4413, 'hotInfo', 'hotInfo', 133, '1', 0, '2021-02-23 14:58:53', '2021-02-23 14:58:53');
-INSERT INTO `eb_system_config` VALUES (4432, 'offline_pay_status', 'offline_pay_status', 79, '0', 0, '2021-02-24 11:13:52', '2021-02-24 11:13:52');
+INSERT INTO `eb_system_config` VALUES (4432, 'offline_pay_status', 'offline_pay_status', 79, '\'1\'', 0, '2021-02-24 11:13:52', '2021-02-24 11:13:52');
 INSERT INTO `eb_system_config` VALUES (5904, 'lowerOrderSwitch', 'lowerOrderSwitch', 111, '0', 0, '2021-07-16 09:47:20', '2021-07-16 09:47:20');
 INSERT INTO `eb_system_config` VALUES (5905, 'deliverGoodsSwitch', 'deliverGoodsSwitch', 111, '0', 0, '2021-07-16 09:47:20', '2021-07-16 09:47:20');
 INSERT INTO `eb_system_config` VALUES (5906, 'priceRevisionSwitch', 'priceRevisionSwitch', 111, '0', 0, '2021-07-16 09:47:20', '2021-07-16 09:47:20');
@@ -7602,7 +7602,7 @@ INSERT INTO `eb_system_config` VALUES (10498, 'pay_weixin_mchid', 'pay_weixin_mc
 INSERT INTO `eb_system_config` VALUES (10499, 'pay_routine_client_p12', 'pay_routine_client_p12', 67, 'file/operation/2020/12/02/04161bfbad984c6490f61b1cb64db8f1qwy6gqdoov.p12', 0, '2025-05-19 18:06:05', '2025-05-19 18:06:05');
 INSERT INTO `eb_system_config` VALUES (10500, 'pay_weixin_certificate_path', 'pay_weixin_certificate_path', 67, '111', 0, '2025-05-19 18:06:05', '2025-05-19 18:06:05');
 INSERT INTO `eb_system_config` VALUES (10501, 'pay_weixin_key', 'pay_weixin_key', 67, '111', 0, '2025-05-19 18:06:05', '2025-05-19 18:06:05');
-INSERT INTO `eb_system_config` VALUES (10502, 'pay_weixin_open', 'pay_weixin_open', 67, '\'1\'', 0, '2025-05-19 18:06:05', '2025-05-19 18:06:05');
+INSERT INTO `eb_system_config` VALUES (10502, 'pay_weixin_open', 'pay_weixin_open', 67, '\'0\'', 0, '2025-05-19 18:06:05', '2025-05-19 18:06:05');
 INSERT INTO `eb_system_config` VALUES (10503, 'paydir', 'paydir', 67, '', 0, '2025-05-19 18:06:05', '2025-05-19 18:06:05');
 INSERT INTO `eb_system_config` VALUES (10558, 'routine_appid', 'routine_appid', 66, '111111', 0, '2025-05-23 10:03:57', '2025-05-28 10:17:31');
 INSERT INTO `eb_system_config` VALUES (10559, 'routine_appsecret', 'routine_appsecret', 66, '111111', 0, '2025-05-23 10:03:57', '2025-05-28 10:17:34');
@@ -7654,6 +7654,7 @@ INSERT INTO `eb_system_config` VALUES (10759, 'android_address', 'android_addres
 INSERT INTO `eb_system_config` VALUES (10760, 'app_version', 'app_version', 138, '1.4.1', 0, '2025-06-20 09:32:26', '2025-06-20 09:32:26');
 INSERT INTO `eb_system_config` VALUES (10761, 'open_upgrade', 'open_upgrade', 138, '\'0\'', 0, '2025-06-20 09:32:26', '2025-06-20 09:32:26');
 INSERT INTO `eb_system_config` VALUES (10763, 'yue_pay_status', 'yue_pay_status', 80, '\'1\'', 0, '2025-06-20 15:15:51', '2025-06-20 15:15:51');
+INSERT INTO `eb_system_config` VALUES (10764, 'pay_mode', '支付模式', 103, 'offline_qr', 0, '2026-07-05 00:00:00', '2026-07-05 00:00:00');
 INSERT INTO `eb_system_config` VALUES (10812, 'store_stock', 'store_stock', 77, '20', 0, '2025-06-21 17:44:36', '2025-06-21 17:44:36');
 INSERT INTO `eb_system_config` VALUES (10813, 'stor_reason', 'stor_reason', 77, '收货地址填错了\n与描述不符 \n信息填错了，重新拍 \n收到商品损坏了 \n未按预定时间发货 \n其它原因', 0, '2025-06-21 17:44:36', '2025-06-21 17:44:36');
 INSERT INTO `eb_system_config` VALUES (10814, 'mobile_top_logo', 'mobile_top_logo', 77, 'crmebimage/public/product/2025/06/04/10d1e53b4f6b484e960003571684df5828zwdt5hdj.png', 0, '2025-06-21 17:44:36', '2025-06-21 17:44:36');
