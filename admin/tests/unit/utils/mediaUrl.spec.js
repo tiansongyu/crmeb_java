@@ -16,11 +16,20 @@ describe('Utils:mediaUrl', () => {
     expect(normalizeCrmebMediaUrl('http://127.0.0.1:20400/crmebimage/public/order/proof.png')).toBe(
       '/crmebimage/public/order/proof.png',
     );
+    expect(normalizeCrmebMediaUrl('//10.0.0.8:20400/crmebimage/public/order/proof.png')).toBe(
+      '/crmebimage/public/order/proof.png',
+    );
+    expect(normalizeCrmebMediaUrl('//172.20.0.8:20400/crmebimage/public/order/proof.png')).toBe(
+      '/crmebimage/public/order/proof.png',
+    );
   });
 
   it('keeps already resolvable urls untouched', () => {
     expect(normalizeCrmebMediaUrl('https://cdn.example.com/crmebimage/public/order/proof.png')).toBe(
       'https://cdn.example.com/crmebimage/public/order/proof.png',
+    );
+    expect(normalizeCrmebMediaUrl('//cdn.example.com/crmebimage/public/order/proof.png')).toBe(
+      '//cdn.example.com/crmebimage/public/order/proof.png',
     );
     expect(normalizeCrmebMediaUrl('data:image/png;base64,abc')).toBe('data:image/png;base64,abc');
     expect(normalizeCrmebMediaUrl('blob:http://example.com/file')).toBe('blob:http://example.com/file');
@@ -39,6 +48,7 @@ describe('Utils:mediaUrl', () => {
         offlinePayVoucher: 'undefinedcrmebimage/public/order/proof.png',
       },
       html: '<img src="crmebimage/public/content/detail.png">',
+      css: 'background-image: url(undefined/crmebimage/public/content/bg.png)',
       title: '商品详情',
     };
 
@@ -48,6 +58,7 @@ describe('Utils:mediaUrl', () => {
     expect(data.product.sliderImages[0]).toBe('/crmebimage/public/product/slider.png');
     expect(data.order.offlinePayVoucher).toBe('/crmebimage/public/order/proof.png');
     expect(data.html).toBe('<img src="/crmebimage/public/content/detail.png">');
+    expect(data.css).toBe('background-image: url(/crmebimage/public/content/bg.png)');
     expect(data.title).toBe('商品详情');
   });
 

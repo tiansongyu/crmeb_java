@@ -1,4 +1,4 @@
-const CRMEB_MEDIA_RE = /(https?:\/\/[^'"(),\s]+\/)?(?:undefined)?\/?crmebimage\/[^'"(),\s]+/g;
+const CRMEB_MEDIA_RE = /((?:https?:)?\/\/[^'"(),\s]+\/)?(?:undefined)?\/?crmebimage\/[^'"(),\s]+/g;
 const CRMEB_MEDIA_PATH_RE = /crmebimage\/.*/;
 const FILE_EXTENSION_RE = /\.([^.\\/]+)$/;
 const PRIVATE_HOST_RE = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/;
@@ -8,9 +8,10 @@ function isAbsoluteMediaUrl(value) {
 }
 
 function isPrivateCrmebMediaUrl(value) {
-  if (!/^https?:\/\//i.test(value) || value.indexOf('crmebimage/') === -1) return false;
+  if (!/^(https?:)?\/\//i.test(value) || value.indexOf('crmebimage/') === -1) return false;
   try {
-    return PRIVATE_HOST_RE.test(new URL(value).hostname);
+    const parseableUrl = value.indexOf('//') === 0 ? `http:${value}` : value;
+    return PRIVATE_HOST_RE.test(new URL(parseableUrl).hostname);
   } catch (e) {
     return false;
   }
