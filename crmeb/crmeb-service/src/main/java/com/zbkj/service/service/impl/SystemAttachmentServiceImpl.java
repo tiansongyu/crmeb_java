@@ -44,7 +44,7 @@ import java.util.regex.Pattern;
 public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao, SystemAttachment>
         implements SystemAttachmentService {
 
-    private static final Pattern CRMEB_MEDIA_REF = Pattern.compile("(https?://[^\"'(),\\s]+/)?(?:undefined)?/?crmebimage/[^\"'(),\\s]+");
+    private static final Pattern CRMEB_MEDIA_REF = Pattern.compile("((?:https?:)?//[^\"'(),\\s]+/)?(?:undefined)?/?crmebimage/[^\"'(),\\s]+");
     private static final Pattern CRMEB_MEDIA_PATH = Pattern.compile("crmebimage/[^\"'(),\\s]+");
     private static final Pattern PRIVATE_HOST = Pattern.compile("^(localhost|127\\.|10\\.|192\\.168\\.|172\\.(1[6-9]|2\\d|3[0-1])\\.).*");
 
@@ -157,16 +157,21 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
     }
 
     private boolean shouldKeepAbsoluteUrl(String raw) {
-        return (raw.startsWith("http://") || raw.startsWith("https://")) && !isPrivateUrl(raw);
+        return isNetworkUrl(raw) && !isPrivateUrl(raw);
     }
 
     private boolean isPrivateUrl(String value) {
         try {
-            String host = URI.create(value).getHost();
+            String parseableUrl = value.startsWith("//") ? "http:" + value : value;
+            String host = URI.create(parseableUrl).getHost();
             return StringUtils.isNotBlank(host) && PRIVATE_HOST.matcher(host).matches();
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private boolean isNetworkUrl(String value) {
+        return value.startsWith("http://") || value.startsWith("https://") || value.startsWith("//");
     }
 
     /**
