@@ -39,8 +39,28 @@ assert.strictEqual(
 );
 
 assert.strictEqual(
+  normalizeImageUrl('//10.0.0.8:2500/crmebimage/public/banner.png', { imageHost }),
+  'https://cdn.example.com/crmebimage/public/banner.png'
+);
+
+assert.strictEqual(
+  normalizeImageUrl('//172.20.0.8:2500/crmebimage/public/banner.png', { imageHost }),
+  'https://cdn.example.com/crmebimage/public/banner.png'
+);
+
+assert.strictEqual(
   normalizeImageUrl('http://img.alicdn.com/imgextra/i2/product.jpg', { imageHost }),
   'http://img.alicdn.com/imgextra/i2/product.jpg'
+);
+
+assert.strictEqual(
+  normalizeImageUrl('//cdn.example.com/crmebimage/public/logo.png', { imageHost: 'https://other.example.com' }),
+  '//cdn.example.com/crmebimage/public/logo.png'
+);
+
+assert.strictEqual(
+  normalizeImageUrl('blob:http://example.com/file', { imageHost }),
+  'blob:http://example.com/file'
 );
 
 assert.strictEqual(
@@ -61,7 +81,10 @@ assert.strictEqual(
 const data = {
   banner: [{ img: 'crmebimage/public/banner.png' }],
   product: { image: 'http://192.168.31.35:2500/crmebimage/public/product.png' },
-  nested: [{ css: 'url(undefinedcrmebimage/presets/bg.png)' }],
+  nested: [{
+    css: 'url(undefined/crmebimage/presets/bg.png)',
+    html: '<img src="//10.0.0.8:2500/crmebimage/public/detail.png">',
+  }],
 };
 
 normalizeImageTree(data, { imageHost });
@@ -69,5 +92,6 @@ normalizeImageTree(data, { imageHost });
 assert.strictEqual(data.banner[0].img, 'https://cdn.example.com/crmebimage/public/banner.png');
 assert.strictEqual(data.product.image, 'https://cdn.example.com/crmebimage/public/product.png');
 assert.strictEqual(data.nested[0].css, 'url(https://cdn.example.com/crmebimage/presets/bg.png)');
+assert.strictEqual(data.nested[0].html, '<img src="https://cdn.example.com/crmebimage/public/detail.png">');
 
 console.log('image-url normalization checks passed');
