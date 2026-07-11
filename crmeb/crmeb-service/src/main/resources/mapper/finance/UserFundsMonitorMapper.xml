@@ -20,6 +20,10 @@
                 and  u.brokerage_price >= #{min, jdbcType=DECIMAL}
             </if>
          GROUP  BY u.uid
-         order by total_brokerage ${sort}
+         order by total_brokerage
+         <choose>
+             <when test='sort == "ASC"'>ASC</when>
+             <otherwise>DESC</otherwise>
+         </choose>
     </select>
 </mapper>

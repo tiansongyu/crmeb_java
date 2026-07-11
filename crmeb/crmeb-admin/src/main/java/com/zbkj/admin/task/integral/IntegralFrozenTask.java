@@ -38,8 +38,7 @@ public class IntegralFrozenTask {
         try {
             userIntegralRecordService.integralThaw();
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("IntegralFrozenTask.task" + " | msg : " + e.getMessage());
+            logger.error("IntegralFrozenTask failed", e);
         }
     }
 

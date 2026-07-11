@@ -44,15 +44,14 @@ public class ProductStockTask {
      */
     public void stockOperation() {
         // cron : 0 */1 * * * ?
-        logger.info("---OrderTakeByUser task------produce Data with fixed rate task: Execution Time - {}", CrmebDateUtil.nowDateTime());
+        logger.info("---ProductStockTask------synchronize product stock: Execution Time - {}", CrmebDateUtil.nowDateTime());
         try {
             storeProductService.consumeProductStock(); // 商品本身库存任务
             storeSeckillService.consumeProductStock(); // 秒杀本身库存任务
             storeBargainService.consumeProductStock(); // 砍价本身库存任务
             storeCombinationService.consumeProductStock(); // 拼团本身库存任务
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("OrderTakeByUser.task" + " | msg : " + e.getMessage());
+            logger.error("ProductStockTask failed", e);
         }
     }
 

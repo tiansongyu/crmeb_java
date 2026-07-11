@@ -37,8 +37,7 @@ public class OrderCancelTask {
             orderTaskService.cancelByUser();
 
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("OrderCancelTask.task" + " | msg : " + e.getMessage());
+            logger.error("OrderCancelTask failed", e);
         }
     }
 }

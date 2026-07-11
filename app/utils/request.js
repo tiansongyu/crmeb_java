@@ -31,10 +31,7 @@ function baseRequest(url, method, data, {
 	noAuth = false,
 	noVerify = false
 }, params,prefix) {
-	let Url = HTTP_REQUEST_URL,header = HEADER
-	if (params != undefined) {
-		header = HEADERPARAMS;
-	}
+	const header = Object.assign({}, params !== undefined ? HEADERPARAMS : HEADER);
 	if (!noAuth) {
 		//登录过期自动登录
 		if (!store.state.app.token && !checkLogin()) {
@@ -45,34 +42,37 @@ function baseRequest(url, method, data, {
 		}
 	}
 	if (store.state.app.token) header[TOKENNAME] = store.state.app.token;
-	return new Promise((reslove, reject) => {
+	return new Promise((resolve, reject) => {
 		uni.request({
-			url: Url + `${prefix?'/api/public/':'/api/front/'}` + url,
+			url: HTTP_REQUEST_URL + `${prefix ? '/api/public/' : '/api/front/'}` + url,
 			method: method || 'GET',
 			header: header,
 			data: data || {},
 			success: (res) => {
-				normalizeImageTree(res.data);
-				if (noVerify)
-					reslove(res.data, res);
-				else if (res.data.code == 200)
-					reslove(res.data, res);
-				else if ([410000, 410001, 410002, 401,402].indexOf(res.data.code) !== -1) {
+				const responseData = res.data || {};
+				normalizeImageTree(responseData);
+				const code = Number(responseData.code);
+				if (noVerify) {
+					resolve(responseData);
+				} else if (code === 200) {
+					resolve(responseData);
+				} else if ([410000, 410001, 410002, 401, 402].indexOf(code) !== -1) {
 					toLogin();
-					reject(res.data);
-				}else if (res.data.code == 500){
-					reject(res.data.message || '系统异常');
-				}else if (res.data.code == 400){
-					reject(res.data.message || '参数校验失败');
-				}else if (res.data.code == 404){
-					reject(res.data.message || '没有找到相关数据');
-				}else if (res.data.code == 403){
-					reject(res.data.message || '没有相关权限');
-				} else
-					reject(res.data.message || '系统错误');
+					reject(responseData);
+				} else if (code === 500) {
+					reject(responseData.message || '系统异常');
+				} else if (code === 400) {
+					reject(responseData.message || '参数校验失败');
+				} else if (code === 404) {
+					reject(responseData.message || '没有找到相关数据');
+				} else if (code === 403) {
+					reject(responseData.message || '没有相关权限');
+				} else {
+					reject(responseData.message || '系统错误');
+				}
 			},
 			fail: (msg) => {
-				reject('请求失败');
+				reject(msg && msg.errMsg ? msg.errMsg : '请求失败');
 			}
 		})
 	});

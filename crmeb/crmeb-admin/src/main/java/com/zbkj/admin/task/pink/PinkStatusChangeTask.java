@@ -36,8 +36,7 @@ public class PinkStatusChangeTask {
         try {
             storePinkService.detectionStatus();
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("PinkStatusChange" + " | msg : " + e.getMessage());
+            logger.error("PinkStatusChangeTask failed", e);
         }
     }
 }

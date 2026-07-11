@@ -2,7 +2,8 @@
   "scripts": {
     "patch:uni": "node scripts/patch-uni-vue-loader.js",
     "prebuild:h5": "npm run patch:uni",
-    "build:h5": "cross-env NODE_ENV=production UNI_PLATFORM=h5 UNI_CLI_CONTEXT=. UNI_INPUT_DIR=. UNI_OUTPUT_DIR=unpackage/dist/build/h5 vue-cli-service uni-build"
+    "build:h5": "cross-env NODE_ENV=production UNI_PLATFORM=h5 UNI_CLI_CONTEXT=. UNI_INPUT_DIR=. UNI_OUTPUT_DIR=unpackage/dist/build/h5 vue-cli-service uni-build",
+    "test": "for test in tests/*.test.cjs; do node \"$test\"; done"
   },
   "dependencies": {
     "@dcloudio/uni-app": "2.0.2-5000720260410001",

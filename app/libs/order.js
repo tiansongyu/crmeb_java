@@ -35,6 +35,16 @@ export function goShopDetail(item, uid) {
 }
 
 /**
+ * 普通商品列表跳转商品详情。
+ */
+export function goProductDetail(id) {
+	if (!id) return;
+	uni.navigateTo({
+		url: `/pages/goods/goods_details/index?id=${encodeURIComponent(id)}`
+	});
+}
+
+/**
  * 活动商品、普通商品、购物车、再次购买预下单
  */
 export function getPreOrder(preOrderType, orderDetails) {

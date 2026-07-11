@@ -33,8 +33,7 @@ public class AsyncWeChatProgramTempMessage {
         try {
             templateMessageService.consumeProgram();
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("AsyncWeChatProgramTempMessage.task" + " | msg : " + e.getMessage());
+            logger.error("AsyncWeChatProgramTempMessage failed", e);
         }
 
     }

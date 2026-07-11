@@ -1,5 +1,5 @@
 import { isArray } from 'util';
-import { exportDefault, titleCase } from '@/utils/index';
+import { exportDefault, titleCase } from '../../utils/index';
 import ruleTrigger from './ruleTrigger';
 
 const units = {

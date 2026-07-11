@@ -1,10 +1,8 @@
 package com.zbkj.common.utils;
 
-import com.zbkj.common.constants.Constants;
 import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.vo.ImageMergeUtilVo;
-import lombok.Data;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.stereotype.Component;
 
 import java.awt.*;
@@ -27,12 +25,11 @@ import java.util.List;
  * +----------------------------------------------------------------------
  * 图片工具类
  */
-@Data
 @Component
 public class ImageMergeUtil {
-    public static BufferedImage bufferedImage; //背景图片
-    public static String model = "merge";
-    public static String ext = "jpg";
+    private static final String MODEL = "merge";
+    private static final String EXT = "jpg";
+    private static final int MAX_REMOTE_IMAGE_BYTES = 10 * 1024 * 1024;
 
     /**
      * 合并生成新的图片文件
@@ -41,52 +38,19 @@ public class ImageMergeUtil {
      * @since 2020-05-06
      */
     public static String drawWordFile(List<ImageMergeUtilVo> list){
-        buildImage(list);
-        if(bufferedImage == null){
-            return null;
-        }
-
+        BufferedImage mergedImage = buildImage(list);
         try {
-            UploadUtil.setModelPath(model);
-            UploadUtil.setExtStr(ext);
-
-            //文件名
-            String newFileName = UploadUtil.fileName(ext);
-            // 创建目标文件的名称，规则请看destPath方法
-            String destPath = UploadUtil.getDestPath(newFileName);
-            // 创建文件
+            String newFileName = UploadUtil.fileName(EXT);
+            String directory = UploadUtil.getRootPath() + MODEL + "/"
+                    + CrmebDateUtil.nowDate("yyyy/MM/dd") + "/";
+            String destPath = FilenameUtils.separatorsToSystem(directory + newFileName);
             File file = UploadUtil.createFile(destPath);
-            ImageIO.write(bufferedImage, ext, file);
+            if (!ImageIO.write(mergedImage, EXT, file)) {
+                throw new CrmebException("不支持的图片输出格式");
+            }
             return destPath;
         } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-        return null;
-    }
-
-    private static void drawImage(ImageMergeUtilVo imageMergeUtilVo){
-        String fileName = getFileSource(imageMergeUtilVo.getPath());
-        if(StringUtils.isBlank(fileName)){
-            return;
-        }
-        try{
-            File file = new File(fileName);
-            BufferedImage read = ImageIO.read(file);
-
-            if(bufferedImage == null || bufferedImage.equals("")){
-                imageMergeUtilVo.setX(0);
-                imageMergeUtilVo.setY(0);
-                //创建新的画布，宽高以第一个图为准
-                bufferedImage = new BufferedImage(read.getWidth(), read.getHeight(), BufferedImage.TYPE_INT_BGR);
-            }
-
-            Graphics graphics = bufferedImage.getGraphics();
-            //在画布上绘制背景图
-            graphics.drawImage(read, imageMergeUtilVo.getX(), imageMergeUtilVo.getX(), read.getWidth(), read.getHeight(), null);
-            file.delete();
-        }catch (Exception e){
-            //合成图片xx失败
-            throw new CrmebException("合成图片 + " + fileName + "失败");
+            throw new CrmebException("合成图片写入失败");
         }
     }
 
@@ -96,14 +60,30 @@ public class ImageMergeUtil {
      * @author Mr.Zhang
      * @since 2020-05-06
      */
-    private static void buildImage(List<ImageMergeUtilVo> list){
-        if(list.size() < 2){
+    private static BufferedImage buildImage(List<ImageMergeUtilVo> list){
+        if (list == null || list.size() < 2) {
             throw new CrmebException("至少需要2张图片才可以做合并");
         }
-
-        for (ImageMergeUtilVo imageMergeUtilVo : list) {
-            drawImage(imageMergeUtilVo);
+        BufferedImage canvas = null;
+        for (int i = 0; i < list.size(); i++) {
+            ImageMergeUtilVo source = list.get(i);
+            BufferedImage image = readImage(source.getPath());
+            if (image == null) {
+                throw new CrmebException("无法读取待合成图片");
+            }
+            if (canvas == null) {
+                canvas = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_BGR);
+            }
+            Graphics2D graphics = canvas.createGraphics();
+            try {
+                int x = i == 0 ? 0 : source.getX();
+                int y = i == 0 ? 0 : source.getY();
+                graphics.drawImage(image, x, y, image.getWidth(), image.getHeight(), null);
+            } finally {
+                graphics.dispose();
+            }
         }
+        return canvas;
     }
 
 
@@ -114,38 +94,42 @@ public class ImageMergeUtil {
      * @author Mr.Zhang
      * @since 2020-05-06
      */
-    private static String getFileSource(String url){
-        if(!url.contains("http")){
-            return url;
-        }
-
+    private static BufferedImage readImage(String path) {
         try {
-            URL urlInfo = new URL(url);
-            // 打开连接
-            URLConnection con = urlInfo.openConnection();
-            // 输入流
-            InputStream is = con.getInputStream();
-            // 1K的数据缓冲
-            byte[] bs = new byte[1024];
-            // 读取到的数据长度
-            int len;
-
-            String fileName = UploadUtil.fileName(ext);
-            // 输出的文件流
-            OutputStream os = new FileOutputStream(fileName);
-            // 开始读取
-            while ((len = is.read(bs)) != -1) {
-                os.write(bs, 0, len);
+            if (!path.startsWith("http://") && !path.startsWith("https://")) {
+                return ImageIO.read(new File(path));
             }
-            // 完毕，关闭所有链接
-            os.close();
-            is.close();
-
-            return fileName;
-        }catch (Exception e){
-            e.printStackTrace();
+            URLConnection connection = new URL(path).openConnection();
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(10000);
+            int contentLength = connection.getContentLength();
+            if (contentLength > MAX_REMOTE_IMAGE_BYTES) {
+                throw new CrmebException("远程图片不能超过10MB");
+            }
+            try (InputStream input = connection.getInputStream()) {
+                byte[] bytes = readLimited(input);
+                return ImageIO.read(new ByteArrayInputStream(bytes));
+            }
+        } catch (CrmebException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CrmebException("读取待合成图片失败");
         }
+    }
 
-        return null;
+    private static byte[] readLimited(InputStream input) throws IOException {
+        try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int total = 0;
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                total += read;
+                if (total > MAX_REMOTE_IMAGE_BYTES) {
+                    throw new CrmebException("远程图片不能超过10MB");
+                }
+                output.write(buffer, 0, read);
+            }
+            return output.toByteArray();
+        }
     }
 }

@@ -4,7 +4,11 @@
 			<image :src="mobileLoginLogo"/>
 		</div>
 		<div class="whiteBg" v-if="formItem === 1">
-			<div class="list" v-if="current !== 1">
+			<div class="login-mode-tabs">
+				<div class="mode-tab account-tab" :class="{ active: current === 0 }" @click="current = 0">账号登录</div>
+				<div class="mode-tab sms-tab" :class="{ active: current === 1 }" @click="current = 1">验证码登录</div>
+			</div>
+			<div class="list" v-if="current === 0">
 				<form @submit.prevent="submit">
 					<div class="item">
 						<div class="acea-row row-middle">
@@ -20,7 +24,7 @@
 					</div>
 				</form>
 			</div>
-			<div class="list" v-if="current !== 0 || appLoginStatus || appleLoginStatus">
+			<div class="list" v-if="current === 1 || appLoginStatus || appleLoginStatus">
 				<div class="item">
 					<div class="acea-row row-middle">
 						<image :src="urlDomain+'crmebimage/perset/staticImg/phone_1.png'" style="width: 24rpx; height: 34rpx;"></image>
@@ -44,14 +48,8 @@
 					</div>
 				</div>
 			</div>
-			<div class="logon bg_color" @click="loginMobile" v-if="current !== 0">登录</div>
+			<div class="logon bg_color" @click="loginMobile" v-if="current === 1 || appLoginStatus || appleLoginStatus">登录</div>
 			<div class="logon bg_color" @click="submit" v-if="current === 0">登录</div>
-			<!-- #ifndef APP-PLUS -->
-			<div class="tips">
-				<div v-if="current==0" @click="current = 1">快速登录</div>
-				<div v-if="current==1" @click="current = 0">账号登录</div>
-			</div>
-			<!-- #endif -->
 			<!-- #ifdef APP-PLUS -->
 			<view class="appLogin" v-if="!appLoginStatus && !appleLoginStatus">
 				<view class="hds">
@@ -97,12 +95,9 @@
 	import attrs, {required,alpha_num,chs_phone} from "@/utils/validate";
 	import {validatorDefaultCatch} from "@/utils/dialog";
 	import {appAuth} from "@/api/public";
-	import {VUE_APP_API_URL} from "@/utils";
+	import {HTTP_REQUEST_URL} from "@/config/app";
 	import Routine from '@/libs/routine';
 	import {Debounce} from '@/utils/validate.js'
-	import {
-		goToAgreement
-	} from "@/libs/order";
 	const BACK_URL = "login_back_url";
 
 	export default {
@@ -114,8 +109,8 @@
 		data: function() {
 			return {
 				urlDomain: this.$Cache.get("imgHost"),
-				navList: ["快速登录", "账号登录"],
-				current: 1,
+				navList: ["账号登录", "验证码登录"],
+				current: 0,
 				account: "",
 				password: "",
 				captcha: "",
@@ -183,9 +178,6 @@
 							title: err
 						});
 					});
-			},
-			userAgree(type) {
-				goToAgreement(type)
 			},
 			// 苹果登录
 			// appleLogin() {
@@ -315,8 +307,8 @@
 			},
 			again() {
 				this.codeUrl =
-					VUE_APP_API_URL +
-					"/sms_captcha?" +
+					HTTP_REQUEST_URL +
+					"/api/front/sms_captcha?" +
 					"key=" +
 					this.keyCode +
 					Date.parse(new Date());
@@ -583,19 +575,44 @@
 	
 		.whiteBg {
 			margin-top: 100rpx;
-	
+
+			.login-mode-tabs {
+				display: flex;
+				align-items: center;
+				padding: 8rpx;
+				margin-bottom: 36rpx;
+				background: #F5F5F5;
+				border-radius: 12rpx;
+
+				.mode-tab {
+					flex: 1;
+					height: 72rpx;
+					line-height: 72rpx;
+					border-radius: 8rpx;
+					text-align: center;
+					font-size: 28rpx;
+					color: #666;
+				}
+
+				.mode-tab.active {
+					color: #FFFFFF;
+					font-weight: 500;
+					@include main_bg_color(theme);
+				}
+			}
+
 			.list {
 				border-radius: 16rpx;
 				overflow: hidden;
-	
+
 				.item {
 					border-bottom: 1px solid #F0F0F0;
 					background: #fff;
-	
+
 					.row-middle {
 						position: relative;
 						padding: 16rpx 45rpx;
-						
+
 						.texts{
 							flex: 1;
 							font-size: 28rpx;
@@ -605,7 +622,7 @@
 							justify-content: center;
 							align-items: center;
 						}
-	
+
 						input {
 							flex: 1;
 							font-size: 28rpx;
@@ -615,7 +632,7 @@
 							justify-content: center;
 							align-items: center;
 						}
-	
+
 						.code {
 							position: absolute;
 							right: 30rpx;
@@ -627,7 +644,7 @@
 					}
 				}
 			}
-	
+
 			.logon {
 				display: flex;
 				align-items: center;
@@ -639,12 +656,6 @@
 				border-radius: 120rpx;
 				color: #FFFFFF;
 				font-size: 30rpx;
-			}
-	
-			.tips {
-				margin: 30rpx;
-				text-align: center;
-				color: #999;
 			}
 		}
 	}

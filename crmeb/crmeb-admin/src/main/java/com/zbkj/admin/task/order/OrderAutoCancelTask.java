@@ -37,8 +37,7 @@ public class OrderAutoCancelTask {
             orderTaskService.autoCancel();
 
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("OrderAutoCancelTask.task" + " | msg : " + e.getMessage());
+            logger.error("OrderAutoCancelTask failed", e);
         }
     }
 }

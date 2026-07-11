@@ -120,7 +120,7 @@ import {
   orderListApi,
   statisticsDataApi,
   orderMarkApi,
-  editPriceApi,
+  updatePriceApi,
   orderRefundApi,
 } from '@/api/order';
 import { required, num } from '@/utils/validate';
@@ -217,7 +217,7 @@ export default {
         }
         data.price = price;
         data.orderNo = opt.orderId;
-        editPriceApi(data)
+        updatePriceApi(data)
           .then(() => {
             that.change = false;
             that.$dialog.success('改价成功');

@@ -38,10 +38,8 @@ public class CallbackController {
     @ApiOperation(value = "微信支付回调")
     @RequestMapping(value = "/wechat", method = RequestMethod.POST)
     public String weChat(@RequestBody String  request) {
-        System.out.println("微信支付回调 request ===> " + request);
-        String response = callbackService.weChat(request);
-        System.out.println("微信支付回调 response ===> " + response);
-        return response;
+        log.debug("收到微信支付回调");
+        return callbackService.weChat(request);
     }
 
     /**
@@ -50,12 +48,9 @@ public class CallbackController {
     @ApiOperation(value = "微信退款回调")
     @RequestMapping(value = "/wechat/refund", method = RequestMethod.POST)
     public String weChatRefund(@RequestBody String request) {
-        System.out.println("微信退款回调 request ===> " + request);
-        String response = callbackService.weChatRefund(request);
-        System.out.println("微信退款回调 response ===> " + response);
-        return response;
+        log.debug("收到微信退款回调");
+        return callbackService.weChatRefund(request);
     }
 }
-
 
 

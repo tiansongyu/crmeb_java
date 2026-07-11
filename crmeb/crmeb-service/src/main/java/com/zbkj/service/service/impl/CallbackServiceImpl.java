@@ -35,7 +35,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import javax.servlet.http.HttpServletRequest;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.security.Security;
 import java.util.*;
@@ -379,7 +378,6 @@ public class CallbackServiceImpl implements CallbackService {
             String signKey = getSignKey(appid);
             // 解码加密信息
             String reqInfo = respMap.get("req_info");
-            System.out.println("encodeReqInfo==>" + reqInfo);
             try {
                 String decodeInfo = decryptToStr(reqInfo, signKey);
                 Map<String, String> infoMap = WxPayUtil.xmlToMap(decodeInfo);
@@ -476,13 +474,7 @@ public class CallbackServiceImpl implements CallbackService {
      * @return 结果
      */
     public static String base64DecodeJustForWxPay(final String source) {
-        String result = "";
         final Base64.Decoder decoder = Base64.getDecoder();
-        try {
-            result = new String(decoder.decode(source), "ISO-8859-1");
-        } catch (final UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-        return result;
+        return new String(decoder.decode(source), StandardCharsets.ISO_8859_1);
     }
 }

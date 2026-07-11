@@ -6,12 +6,12 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import javax.imageio.ImageIO;
-import javax.servlet.ServletOutputStream;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -30,20 +30,19 @@ import java.util.HashMap;
  * 二维码工具
  */
 @Component
+@Slf4j
 public class QRCodeUtil {
 
     public static String crateQRCode(String content, int width, int height) throws IOException {
 
         if (!StringUtils.isEmpty(content)) {
-            ServletOutputStream stream = null;
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
             @SuppressWarnings("rawtypes")
             HashMap<EncodeHintType, Comparable> hints = new HashMap<>();
             hints.put(EncodeHintType.CHARACTER_SET, "utf-8"); // 指定字符编码为“utf-8”
             hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H); // 指定二维码的纠错等级为中级
             hints.put(EncodeHintType.MARGIN, 2); // 设置图片的边距
 
-            try {
+            try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
                 QRCodeWriter writer = new QRCodeWriter();
                 BitMatrix bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, width, height, hints);
 
@@ -55,12 +54,7 @@ public class QRCodeUtil {
 
                 return CrmebUtil.getBase64Image(Base64.encodeBase64String(os.toByteArray()));
             } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                if (stream != null) {
-                    stream.flush();
-                    stream.close();
-                }
+                log.warn("生成二维码失败", e);
             }
         }
         return null;

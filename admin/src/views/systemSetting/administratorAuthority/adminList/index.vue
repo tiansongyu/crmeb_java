@@ -268,25 +268,6 @@ export default {
       this.editDialogConfig.isCreate = isCreate;
       this.editDialogConfig.visible = true;
     },
-    handlerGetMenuList() {
-      // 获取菜单全部数据后做menu翻译使用
-      systemAdminApi.listCategroy({ page: 1, limit: 999, type: 5 }).then((data) => {
-        this.menuList = data.list;
-        this.listData.list.forEach((item) => {
-          const _muneText = [];
-          const menuids = item.rules.split(',');
-          menuids.map((muid) => {
-            this.menuList.filter((menu) => {
-              if (menu.id == muid) {
-                _muneText.push(menu.name);
-              }
-            });
-          });
-          item.rulesView = _muneText.join(',');
-          this.$set(item, 'rulesViews', item.rulesView);
-        });
-      });
-    },
     hideEditDialog() {
       this.editDialogConfig.visible = false;
       this.handleGetAdminList();

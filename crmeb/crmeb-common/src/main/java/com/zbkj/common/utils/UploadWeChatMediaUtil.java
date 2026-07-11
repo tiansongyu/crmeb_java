@@ -3,6 +3,7 @@ package com.zbkj.common.utils;
 
 import com.alibaba.fastjson.JSONObject;
 import com.zbkj.common.exception.CrmebException;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -13,9 +14,9 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * http通用工具类
@@ -29,6 +30,7 @@ import java.io.InputStream;
  * | Author: CRMEB Team <admin@crmeb.com>
  * +----------------------------------------------------------------------
  */
+@Slf4j
 public class UploadWeChatMediaUtil {
     /**
      * 把文件上传到指定url上去
@@ -36,65 +38,40 @@ public class UploadWeChatMediaUtil {
      * @param file 待上传文件
      */
     public static JSONObject uploadFile(String url, InputStream file, String fileName) throws IOException {
-        CloseableHttpClient httpclient = HttpClients.createDefault();
-        try {
+        try (CloseableHttpClient httpclient = HttpClients.createDefault(); InputStream media = file) {
             HttpPost httppost = new HttpPost(url);
 
-            RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(200000).setSocketTimeout(200000).build();
+            RequestConfig requestConfig = RequestConfig.custom()
+                    .setConnectTimeout(5000)
+                    .setConnectionRequestTimeout(5000)
+                    .setSocketTimeout(30000)
+                    .build();
             httppost.setConfig(requestConfig);
 
-            /**
-             * 这一步最关键：
-             *调用addBinaryBody("media",input2byte(file),ContentType.DEFAULT_BINARY, fileName),
-             * fileName可以为任意值，但不能为null，如果为null则上传失败。
-             * input2byte(file)：把inputstream转为byte[]，
-             * 如果直接调用addPart用FileBody做参数，则MultifilePart不好转换；
-             * 如果直接调用addPart用InpustreamBody做参数，则因为没有fileName会造成上传失败
-             */
+            // 直接流式上传，避免先把整个素材复制到内存。
             HttpEntity reqEntity = MultipartEntityBuilder.create()
-                    .addBinaryBody("media", input2byte(file), ContentType.DEFAULT_BINARY,
-                            fileName).build();
+                    .addBinaryBody("media", media, ContentType.DEFAULT_BINARY, fileName)
+                    .build();
 
             httppost.setEntity(reqEntity);
-            CloseableHttpResponse response = httpclient.execute(httppost);
-            try {
-                System.out.println(response.getStatusLine());
+            try (CloseableHttpResponse response = httpclient.execute(httppost)) {
+                int status = response.getStatusLine().getStatusCode();
+                if (status < 200 || status >= 300) {
+                    throw new CrmebException("上传微信素材失败");
+                }
                 HttpEntity resEntity = response.getEntity();
                 if (resEntity != null) {
-                    String responseEntityStr = EntityUtils.toString(response.getEntity());
+                    String responseEntityStr = EntityUtils.toString(resEntity, StandardCharsets.UTF_8);
                     return JSONObject.parseObject(responseEntityStr);
                 }
-                EntityUtils.consume(resEntity);
-            }catch (Exception e){
-                e.printStackTrace();
-                throw new CrmebException(e.getMessage());
-            }finally {
-                response.close();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new CrmebException(e.getMessage());
-        } finally {
-            try {
-                httpclient.close();
-            } catch (IOException e) {
-                throw new CrmebException(e.getMessage());
-            }
+        } catch (CrmebException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("上传微信素材失败", e);
+            throw new CrmebException("上传微信素材失败");
         }
 
         return null;
     }
-
-
-    private static byte[] input2byte(InputStream inStream)
-            throws IOException {
-        ByteArrayOutputStream swapStream = new ByteArrayOutputStream();
-        byte[] buff = new byte[100];
-        int rc = 0;
-        while ((rc = inStream.read(buff, 0, 100)) > 0) {
-            swapStream.write(buff, 0, rc);
-        }
-        return swapStream.toByteArray();
-    }
 }
-

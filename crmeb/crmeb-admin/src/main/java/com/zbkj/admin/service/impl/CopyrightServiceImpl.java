@@ -68,15 +68,17 @@ public class CopyrightServiceImpl implements CopyrightService {
         response.setVersion(version);
 
         JSONObject jsonObject = restTemplateUtil.post(StrUtil.format(CRMEB_COPYRIGHT_URL, domainName, label, version));
-        if (ObjectUtil.isNull(jsonObject.getInteger("status")) || !jsonObject.getInteger("status").equals(200)) {
-            throw new CrmebException("CRMEB版权接口调用失败," + jsonObject);
+        if (ObjectUtil.isNull(jsonObject) || !Integer.valueOf(200).equals(jsonObject.getInteger("status"))) {
+            throw new CrmebException("CRMEB版权接口调用失败");
         }
-        System.out.println("==================================== " + jsonObject.toString());
         JSONObject dataJson = jsonObject.getJSONObject(CRMEB_COPYRIGHT_URL_DATA);
+        if (ObjectUtil.isNull(dataJson) || ObjectUtil.isNull(dataJson.getInteger(CRMEB_COPYRIGHT_URL_STATUS))) {
+            throw new CrmebException("CRMEB版权接口返回数据异常");
+        }
 
         response.setStatus(dataJson.getInteger(CRMEB_COPYRIGHT_URL_STATUS));
         response.setCopyright(dataJson.getString(CRMEB_COPYRIGHT_URL_COPYRIGHT));
-        if (!dataJson.getInteger(CRMEB_COPYRIGHT_URL_STATUS).equals(1)) {
+        if (!Integer.valueOf(1).equals(dataJson.getInteger(CRMEB_COPYRIGHT_URL_STATUS))) {
             return response;
         }
         response.setAuthCode(dataJson.getString(CRMEB_COPYRIGHT_URL_AUTHCODE));

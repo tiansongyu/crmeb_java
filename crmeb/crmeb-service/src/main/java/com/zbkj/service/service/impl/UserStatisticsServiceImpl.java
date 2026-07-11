@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -92,14 +93,7 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
             String beforeSevenDateStr = DateUtil.offsetDay(nowDate, -6).toString("yyyy-MM-dd");
             String yesterdayStr = DateUtil.yesterday().toString("yyyy-MM-dd");
             UserOverviewResponse intervalDate = getDataByPeriod(beforeSevenDateStr, yesterdayStr);
-            intervalDate.setRechargeUserNum(intervalDate.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-            intervalDate.setPageviews(intervalDate.getPageviews() + nowDayData.getPageviews());
-            intervalDate.setActiveUserNum(intervalDate.getActiveUserNum() + nowDayData.getActiveUserNum());
-            intervalDate.setOrderUserNum(intervalDate.getOrderUserNum() + nowDayData.getOrderUserNum());
-            intervalDate.setRechargeUserNum(intervalDate.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-            intervalDate.setOrderPayUserNum(intervalDate.getOrderPayUserNum() + nowDayData.getOrderPayUserNum());
-            intervalDate.setPayOrderAmount(intervalDate.getPayOrderAmount().add(nowDayData.getPayOrderAmount()));
-            intervalDate.setCustomerPrice(commonCustomerPrice(intervalDate.getPayOrderAmount(), intervalDate.getOrderPayUserNum()));
+            mergeOverview(intervalDate, nowDayData);
 
             // 获取前14天-前8天这个区间的数据
             String beforeFourteenDateStr = DateUtil.offsetDay(nowDate, -13).toString("yyyy-MM-dd");
@@ -116,14 +110,7 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
             String beforeSevenDateStr = DateUtil.offsetDay(nowDate, -29).toString("yyyy-MM-dd");
             String yesterdayStr = DateUtil.yesterday().toString("yyyy-MM-dd");
             UserOverviewResponse intervalDate = getDataByPeriod(beforeSevenDateStr, yesterdayStr);
-            intervalDate.setRechargeUserNum(intervalDate.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-            intervalDate.setPageviews(intervalDate.getPageviews() + nowDayData.getPageviews());
-            intervalDate.setActiveUserNum(intervalDate.getActiveUserNum() + nowDayData.getActiveUserNum());
-            intervalDate.setOrderUserNum(intervalDate.getOrderUserNum() + nowDayData.getOrderUserNum());
-            intervalDate.setRechargeUserNum(intervalDate.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-            intervalDate.setOrderPayUserNum(intervalDate.getOrderPayUserNum() + nowDayData.getOrderPayUserNum());
-            intervalDate.setPayOrderAmount(intervalDate.getPayOrderAmount().add(nowDayData.getPayOrderAmount()));
-            intervalDate.setCustomerPrice(commonCustomerPrice(intervalDate.getPayOrderAmount(), intervalDate.getOrderPayUserNum()));
+            mergeOverview(intervalDate, nowDayData);
 
             // 获取前14天-前8天这个区间的数据
             String beforeFourteenDateStr = DateUtil.offsetDay(nowDate, -59).toString("yyyy-MM-dd");
@@ -145,28 +132,14 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
                 // 获取昨天的数据
                 String yesterdayStr = DateUtil.yesterday().toString("yyyy-MM-dd");
                 UserOverviewResponse yesterdayData = getDataByDate(yesterdayStr);
-                intervalDate.setRechargeUserNum(yesterdayData.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-                intervalDate.setPageviews(yesterdayData.getPageviews() + nowDayData.getPageviews());
-                intervalDate.setActiveUserNum(yesterdayData.getActiveUserNum() + nowDayData.getActiveUserNum());
-                intervalDate.setOrderUserNum(yesterdayData.getOrderUserNum() + nowDayData.getOrderUserNum());
-                intervalDate.setRechargeUserNum(yesterdayData.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-                intervalDate.setOrderPayUserNum(yesterdayData.getOrderPayUserNum() + nowDayData.getOrderPayUserNum());
-                intervalDate.setPayOrderAmount(yesterdayData.getPayOrderAmount().add(nowDayData.getPayOrderAmount()));
-                intervalDate.setCustomerPrice(commonCustomerPrice(intervalDate.getPayOrderAmount(), intervalDate.getOrderPayUserNum()));
+                intervalDate = mergeOverview(yesterdayData, nowDayData);
             } else {
                 UserOverviewResponse nowDayData = getDataByDate(nowDate.toString("yyyy-MM-dd"));
                 // 获取周一到现在的数据
                 String weekStartDateStr = DateUtil.beginOfWeek(nowDate).toString("yyyy-MM-dd");
                 String yesterdayStr = DateUtil.yesterday().toString("yyyy-MM-dd");
                 intervalDate = getDataByPeriod(weekStartDateStr, yesterdayStr);
-                intervalDate.setRechargeUserNum(intervalDate.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-                intervalDate.setPageviews(intervalDate.getPageviews() + nowDayData.getPageviews());
-                intervalDate.setActiveUserNum(intervalDate.getActiveUserNum() + nowDayData.getActiveUserNum());
-                intervalDate.setOrderUserNum(intervalDate.getOrderUserNum() + nowDayData.getOrderUserNum());
-                intervalDate.setRechargeUserNum(intervalDate.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-                intervalDate.setOrderPayUserNum(intervalDate.getOrderPayUserNum() + nowDayData.getOrderPayUserNum());
-                intervalDate.setPayOrderAmount(intervalDate.getPayOrderAmount().add(nowDayData.getPayOrderAmount()));
-                intervalDate.setCustomerPrice(commonCustomerPrice(intervalDate.getPayOrderAmount(), intervalDate.getOrderPayUserNum()));
+                mergeOverview(intervalDate, nowDayData);
             }
 
             // 获取上一周的数据
@@ -190,28 +163,14 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
                 // 获取昨天的数据
                 String yesterdayStr = DateUtil.yesterday().toString("yyyy-MM-dd");
                 UserOverviewResponse yesterdayData = getDataByDate(yesterdayStr);
-                intervalDate.setRechargeUserNum(yesterdayData.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-                intervalDate.setPageviews(yesterdayData.getPageviews() + nowDayData.getPageviews());
-                intervalDate.setActiveUserNum(yesterdayData.getActiveUserNum() + nowDayData.getActiveUserNum());
-                intervalDate.setOrderUserNum(yesterdayData.getOrderUserNum() + nowDayData.getOrderUserNum());
-                intervalDate.setRechargeUserNum(yesterdayData.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-                intervalDate.setOrderPayUserNum(yesterdayData.getOrderPayUserNum() + nowDayData.getOrderPayUserNum());
-                intervalDate.setPayOrderAmount(yesterdayData.getPayOrderAmount().add(nowDayData.getPayOrderAmount()));
-                intervalDate.setCustomerPrice(commonCustomerPrice(intervalDate.getPayOrderAmount(), intervalDate.getOrderPayUserNum()));
+                intervalDate = mergeOverview(yesterdayData, nowDayData);
             } else {
                 UserOverviewResponse nowDayData = getDataByDate(nowDate.toString("yyyy-MM-dd"));
                 // 获取月初到现在的数据
                 String monthStartDateStr = DateUtil.beginOfMonth(nowDate).toString("yyyy-MM-dd");
                 String yesterdayStr = DateUtil.yesterday().toString("yyyy-MM-dd");
                 intervalDate = getDataByPeriod(monthStartDateStr, yesterdayStr);
-                intervalDate.setRechargeUserNum(intervalDate.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-                intervalDate.setPageviews(intervalDate.getPageviews() + nowDayData.getPageviews());
-                intervalDate.setActiveUserNum(intervalDate.getActiveUserNum() + nowDayData.getActiveUserNum());
-                intervalDate.setOrderUserNum(intervalDate.getOrderUserNum() + nowDayData.getOrderUserNum());
-                intervalDate.setRechargeUserNum(intervalDate.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-                intervalDate.setOrderPayUserNum(intervalDate.getOrderPayUserNum() + nowDayData.getOrderPayUserNum());
-                intervalDate.setPayOrderAmount(intervalDate.getPayOrderAmount().add(nowDayData.getPayOrderAmount()));
-                intervalDate.setCustomerPrice(commonCustomerPrice(intervalDate.getPayOrderAmount(), intervalDate.getOrderPayUserNum()));
+                mergeOverview(intervalDate, nowDayData);
             }
 
             // 获取上一月的数据
@@ -236,26 +195,12 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
                 UserOverviewResponse nowDayData = getDataByDate(nowDate.toString("yyyy-MM-dd"));
                 // 获取昨天的数据
                 UserOverviewResponse yesterdayData = getDataByDate(yesterdayStr);
-                intervalDate.setRechargeUserNum(yesterdayData.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-                intervalDate.setPageviews(yesterdayData.getPageviews() + nowDayData.getPageviews());
-                intervalDate.setActiveUserNum(yesterdayData.getActiveUserNum() + nowDayData.getActiveUserNum());
-                intervalDate.setOrderUserNum(yesterdayData.getOrderUserNum() + nowDayData.getOrderUserNum());
-                intervalDate.setRechargeUserNum(yesterdayData.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-                intervalDate.setOrderPayUserNum(yesterdayData.getOrderPayUserNum() + nowDayData.getOrderPayUserNum());
-                intervalDate.setPayOrderAmount(yesterdayData.getPayOrderAmount().add(nowDayData.getPayOrderAmount()));
-                intervalDate.setCustomerPrice(commonCustomerPrice(intervalDate.getPayOrderAmount(), intervalDate.getOrderPayUserNum()));
+                intervalDate = mergeOverview(yesterdayData, nowDayData);
             } else {
                 UserOverviewResponse nowDayData = getDataByDate(nowDate.toString("yyyy-MM-dd"));
                 // 获取年初到现在的数据
                 intervalDate = getDataByPeriod(beginOfYear, yesterdayStr);
-                intervalDate.setRechargeUserNum(intervalDate.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-                intervalDate.setPageviews(intervalDate.getPageviews() + nowDayData.getPageviews());
-                intervalDate.setActiveUserNum(intervalDate.getActiveUserNum() + nowDayData.getActiveUserNum());
-                intervalDate.setOrderUserNum(intervalDate.getOrderUserNum() + nowDayData.getOrderUserNum());
-                intervalDate.setRechargeUserNum(intervalDate.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-                intervalDate.setOrderPayUserNum(intervalDate.getOrderPayUserNum() + nowDayData.getOrderPayUserNum());
-                intervalDate.setPayOrderAmount(intervalDate.getPayOrderAmount().add(nowDayData.getPayOrderAmount()));
-                intervalDate.setCustomerPrice(commonCustomerPrice(intervalDate.getPayOrderAmount(), intervalDate.getOrderPayUserNum()));
+                mergeOverview(intervalDate, nowDayData);
             }
 
             // 获取上一年的数据
@@ -302,19 +247,12 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
         long between = DateUtil.between(startDate, endDate, DateUnit.DAY);
         UserOverviewResponse intervalDate = new UserOverviewResponse();
         // 判断结束时间是否是今天
-        if (DateUtil.isSameDay(startDate, DateUtil.date())) {
+        if (DateUtil.isSameDay(endDate, DateUtil.date())) {
             // 获取今天的数据(所有数据现查)
             UserOverviewResponse nowDayData = getDataByDate(DateUtil.date().toString("yyyy-MM-dd"));
             String yesterdayStr = DateUtil.yesterday().toString("yyyy-MM-dd");
             intervalDate = getDataByPeriod(startDate.toString("yyyy-MM-dd"), yesterdayStr);
-            intervalDate.setRechargeUserNum(intervalDate.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-            intervalDate.setPageviews(intervalDate.getPageviews() + nowDayData.getPageviews());
-            intervalDate.setActiveUserNum(intervalDate.getActiveUserNum() + nowDayData.getActiveUserNum());
-            intervalDate.setOrderUserNum(intervalDate.getOrderUserNum() + nowDayData.getOrderUserNum());
-            intervalDate.setRechargeUserNum(intervalDate.getRechargeUserNum() + nowDayData.getRechargeUserNum());
-            intervalDate.setOrderPayUserNum(intervalDate.getOrderPayUserNum() + nowDayData.getOrderPayUserNum());
-            intervalDate.setPayOrderAmount(intervalDate.getPayOrderAmount().add(nowDayData.getPayOrderAmount()));
-            intervalDate.setCustomerPrice(commonCustomerPrice(intervalDate.getPayOrderAmount(), intervalDate.getOrderPayUserNum()));
+            mergeOverview(intervalDate, nowDayData);
         } else {
             intervalDate = getDataByPeriod(startDate.toString("yyyy-MM-dd"), endDate.toString("yyyy-MM-dd"));
         }
@@ -658,13 +596,33 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
      * @return BigDecimal
      */
     private BigDecimal commonCustomerPrice(BigDecimal amount, Integer peopleNum) {
-        if (peopleNum.equals(0)) {
+        if (peopleNum == null || peopleNum == 0 || amount == null || amount.signum() == 0) {
             return BigDecimal.ZERO;
         }
-        if (BigDecimal.ZERO.compareTo(amount) == 0) {
-            return BigDecimal.ZERO;
-        }
-        return amount.divide(BigDecimal.valueOf(peopleNum), 2, BigDecimal.ROUND_HALF_UP);
+        return amount.divide(BigDecimal.valueOf(peopleNum), 2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 合并两个完整的用户概览，避免各时间维度重复维护同一组累计字段。
+     */
+    private UserOverviewResponse mergeOverview(UserOverviewResponse target, UserOverviewResponse addition) {
+        target.setRegisterNum(intValue(target.getRegisterNum()) + intValue(addition.getRegisterNum()));
+        target.setPageviews(intValue(target.getPageviews()) + intValue(addition.getPageviews()));
+        target.setActiveUserNum(intValue(target.getActiveUserNum()) + intValue(addition.getActiveUserNum()));
+        target.setOrderUserNum(intValue(target.getOrderUserNum()) + intValue(addition.getOrderUserNum()));
+        target.setRechargeUserNum(intValue(target.getRechargeUserNum()) + intValue(addition.getRechargeUserNum()));
+        target.setOrderPayUserNum(intValue(target.getOrderPayUserNum()) + intValue(addition.getOrderPayUserNum()));
+        target.setPayOrderAmount(decimalValue(target.getPayOrderAmount()).add(decimalValue(addition.getPayOrderAmount())));
+        target.setCustomerPrice(commonCustomerPrice(target.getPayOrderAmount(), target.getOrderPayUserNum()));
+        return target;
+    }
+
+    private int intValue(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private BigDecimal decimalValue(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     /**
@@ -688,17 +646,17 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
      * （本期数 - 上期数）/上期数量*100%
      */
     private String calculateRatio(Integer data, Integer beforeData) {
-        if (data - beforeData == 0) {
+        int current = intValue(data);
+        int previous = intValue(beforeData);
+        if (current == previous) {
             return "0%";
         }
-        if (beforeData.equals(0)) {
+        if (previous == 0) {
             return "100%";
         }
-        BigDecimal bigDecimal = new BigDecimal(data);
-        BigDecimal beforeBigDecimal = new BigDecimal(beforeData);
-        BigDecimal ratio = bigDecimal.subtract(beforeBigDecimal).divide(beforeBigDecimal, 2, BigDecimal.ROUND_HALF_UP);
-        int intValue = ratio.multiply(BigDecimal.TEN).multiply(BigDecimal.TEN).intValue();
-        return intValue + "%";
+        BigDecimal ratio = BigDecimal.valueOf(current - previous)
+                .divide(BigDecimal.valueOf(previous), 2, RoundingMode.HALF_UP);
+        return ratio.movePointRight(2).intValue() + "%";
     }
 
     /**

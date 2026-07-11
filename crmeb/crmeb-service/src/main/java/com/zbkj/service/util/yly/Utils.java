@@ -1,37 +1,29 @@
 package com.zbkj.service.util.yly;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class Utils {
+    private static final char[] HEX = "0123456789abcdef".toCharArray();
+
     public static String getMD5Str(String str) {
-        String re = null;
         try {
-            byte[] tem = str.getBytes();
-            MessageDigest md5 = MessageDigest.getInstance("md5");
-            md5.reset();
-            md5.update(tem);
-            byte[] encrypt = md5.digest();
+            MessageDigest md5 = MessageDigest.getInstance("MD5");
+            byte[] encrypt = md5.digest(str.getBytes(StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder();
             for (byte t : encrypt) {
-                String s = Integer.toHexString(t & 0xFF);
-                if (s.length() == 1)
-                    s = "0" + s;
-                sb.append(s);
+                sb.append(HEX[(t >>> 4) & 0x0f]);
+                sb.append(HEX[t & 0x0f]);
             }
-            re = sb.toString();
+            return sb.toString();
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("JVM不支持MD5", e);
         }
-        if (re.length() == 31)
-            return "0" + re;
-        return re;
     }
 
     public static boolean isNull(String content) {
-        if (content != null && !content.equals(""))
-            return false;
-        return true;
+        return content == null || content.isEmpty();
     }
 
     public static String getTimestamp() {

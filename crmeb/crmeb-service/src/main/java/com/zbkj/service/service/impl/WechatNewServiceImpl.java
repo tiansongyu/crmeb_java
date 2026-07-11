@@ -277,7 +277,7 @@ public class WechatNewServiceImpl implements WechatNewService {
                     try {
                         return CrmebUtil.getBase64Image(Base64.encodeBase64String(bytes));
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        logger.error("微信小程序码转换Base64异常", e);
                         throw new CrmebException("微信小程序码转换Base64异常");
                     }
                 }
@@ -287,7 +287,7 @@ public class WechatNewServiceImpl implements WechatNewService {
         try {
             return CrmebUtil.getBase64Image(Base64.encodeBase64String(bytes));
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("微信小程序码转换Base64异常", e);
             throw new CrmebException("微信小程序码转换Base64异常");
         }
     }
@@ -302,7 +302,7 @@ public class WechatNewServiceImpl implements WechatNewService {
     public String createQrCode(JSONObject jsonObject) {
         String miniAccessToken = getMiniAccessToken();
         String url = StrUtil.format(WeChatConstants.WECHAT_MINI_QRCODE_UNLIMITED_URL, miniAccessToken);
-        logger.info("微信小程序码生成参数:{}", jsonObject);
+        logger.debug("生成微信小程序码请求");
         byte[] bytes = restTemplateUtil.postJsonDataAndReturnBuffer(url, jsonObject);
         String response = new String(bytes);
         if (StringUtils.contains(response, "errcode")) {
@@ -325,7 +325,7 @@ public class WechatNewServiceImpl implements WechatNewService {
                     try {
                         return CrmebUtil.getBase64Image(Base64.encodeBase64String(bytes));
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        logger.error("微信小程序码转换Base64异常", e);
                         throw new CrmebException("微信小程序码转换Base64异常");
                     }
                 }
@@ -335,7 +335,7 @@ public class WechatNewServiceImpl implements WechatNewService {
         try {
             return CrmebUtil.getBase64Image(Base64.encodeBase64String(bytes));
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("微信小程序码转换Base64异常", e);
             throw new CrmebException("微信小程序码转换Base64异常");
         }
     }
@@ -379,8 +379,8 @@ public class WechatNewServiceImpl implements WechatNewService {
             responseVo.setExtra(unifiedorderVo.getScene_info());
             return responseVo;
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new CrmebException(e.getMessage());
+            logger.error("生成微信支付订单失败", e);
+            throw new CrmebException("生成微信支付订单失败");
         }
     }
 
@@ -446,8 +446,8 @@ public class WechatNewServiceImpl implements WechatNewService {
 
             return record;
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new CrmebException("查询微信订单mapToXml异常===》" + e.getMessage());
+            logger.error("查询微信订单响应转换异常", e);
+            throw new CrmebException("查询微信订单响应转换异常");
         }
     }
 
@@ -548,7 +548,7 @@ public class WechatNewServiceImpl implements WechatNewService {
         String accessToken = getPublicAccessToken();
         String url = StrUtil.format(WeChatConstants.WECHAT_PUBLIC_MENU_CREATE_URL, accessToken);
         String result = restTemplateUtil.postJsonData(url, JSONObject.parseObject(data));
-        logger.info("微信消息发送结果:" + result);
+        logger.debug("微信自定义菜单创建请求完成");
         JSONObject jsonObject = JSONObject.parseObject(result);
         if (ObjectUtil.isNull(jsonObject)) {
             throw new CrmebException("微信平台接口异常，没任何数据返回！");
@@ -612,8 +612,8 @@ public class WechatNewServiceImpl implements WechatNewService {
             xml = restTemplateUtil.postWXRefundXml(url, xmlStr, wxRefundVo.getMch_id(), path);
             map = XmlUtil.xmlToMap(xml);
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new CrmebException("xmlToMap错误，xml = " + xml);
+            logger.error("微信退款响应解析失败", e);
+            throw new CrmebException("微信退款响应解析失败");
         }
         if (null == map) {
             throw new CrmebException("微信无信息返回，微信申请退款失败！");
@@ -629,7 +629,7 @@ public class WechatNewServiceImpl implements WechatNewService {
             wxPayExceptionDispose(map, "微信申请退款业务异常");
             throw new CrmebException("微信申请退款失败2！" + responseVo.getErrCodeDes());
         }
-        System.out.println("================微信申请退款结束=========================");
+        logger.info("微信退款申请成功");
         return responseVo;
     }
 
@@ -942,4 +942,3 @@ public class WechatNewServiceImpl implements WechatNewService {
     }
 
 }
-

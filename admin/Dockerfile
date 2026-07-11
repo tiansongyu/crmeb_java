@@ -5,7 +5,8 @@ COPY package*.json ./
 RUN npm install -g npm@9.9.4 \
     && if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
 COPY . .
-RUN npm run build:prod
+RUN npm run test:unit -- --runInBand \
+    && npm run build:prod
 
 FROM nginx:1.25-alpine
 

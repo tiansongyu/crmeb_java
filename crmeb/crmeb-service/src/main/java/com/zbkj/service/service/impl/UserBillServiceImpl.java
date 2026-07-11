@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -160,27 +161,26 @@ public class UserBillServiceImpl extends ServiceImpl<UserBillDao, UserBill> impl
     @Override
     public BigDecimal getSumBigDecimal(Integer pm, Integer userId, String category, String date, String type) {
         QueryWrapper<UserBill> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("category", category).
-                eq("status", 1);
-        queryWrapper.eq("type", Constants.USER_BILL_TYPE_PAY_PRODUCT_REFUND);
+        queryWrapper.select("COALESCE(SUM(number), 0) AS number");
+        queryWrapper.eq("category", category).eq("status", 1);
         if (ObjectUtil.isNotNull(userId)) {
             queryWrapper.eq("uid", userId);
         }
-        if (null != pm) {
+        if (ObjectUtil.isNotNull(pm)) {
             queryWrapper.eq("pm", pm);
         }
-        if (null != type) {
+        if (StrUtil.isNotBlank(type)) {
             queryWrapper.eq("type", type);
         }
-        if (null != date) {
+        if (StrUtil.isNotBlank(date)) {
             DateLimitUtilVo dateLimit = CrmebDateUtil.getDateLimit(date);
             queryWrapper.between("create_time", dateLimit.getStartTime(), dateLimit.getEndTime());
         }
-        List<UserBill> userBills = dao.selectList(queryWrapper);
-        if (CollUtil.isEmpty(userBills)) {
+        UserBill total = dao.selectOne(queryWrapper);
+        if (ObjectUtil.isNull(total) || ObjectUtil.isNull(total.getNumber())) {
             return BigDecimal.ZERO;
         }
-        return userBills.stream().map(UserBill::getNumber).reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, BigDecimal.ROUND_DOWN);
+        return total.getNumber().setScale(2, RoundingMode.DOWN);
     }
 
     /**
@@ -282,4 +282,3 @@ public class UserBillServiceImpl extends ServiceImpl<UserBillDao, UserBill> impl
     }
 
 }
-

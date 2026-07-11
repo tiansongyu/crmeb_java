@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
 public class OrderAutoCompleteTask {
 
     //日志
-    private static final Logger logger = LoggerFactory.getLogger(OrderCompleteTask.class);
+    private static final Logger logger = LoggerFactory.getLogger(OrderAutoCompleteTask.class);
 
     @Autowired
     private OrderTaskService orderTaskService;
@@ -37,8 +37,7 @@ public class OrderAutoCompleteTask {
         try {
             orderTaskService.autoComplete();
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("OrderAutoCompleteTask.task" + " | msg : " + e.getMessage());
+            logger.error("OrderAutoCompleteTask failed", e);
         }
     }
 

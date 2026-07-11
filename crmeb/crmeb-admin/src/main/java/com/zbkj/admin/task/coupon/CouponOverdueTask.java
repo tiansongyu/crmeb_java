@@ -37,8 +37,7 @@ public class CouponOverdueTask {
         try {
             couponUserService.overdueTask();
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("CouponOverdueTask.task" + " | msg : " + e.getMessage());
+            logger.error("CouponOverdueTask failed", e);
         }
     }
 

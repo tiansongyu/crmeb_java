@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 FROM maven:3.8.8-eclipse-temurin-8 AS build
 
 ARG MODULE=crmeb-admin
@@ -14,7 +15,8 @@ COPY crmeb-service/src crmeb-service/src
 COPY crmeb-admin/src crmeb-admin/src
 COPY crmeb-front/src crmeb-front/src
 
-RUN mvn -pl "${MODULE}" -am -DskipTests package
+RUN --mount=type=cache,id=crmeb-maven-repository,target=/root/.m2 \
+    mvn -pl "${MODULE}" -am -DskipTests package
 
 FROM eclipse-temurin:8-jre
 

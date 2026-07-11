@@ -2,14 +2,29 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.zbkj.service.dao.StoreOrderDao">
 
-    <select id="getTotalPrice" resultType="java.math.BigDecimal">
-        select sum(pay_price) from eb_store_order where ${where} and refund_status = 0
-    </select>
-    <select id="getRefundPrice" resultType="java.math.BigDecimal">
-        select sum(refund_price) from eb_store_order where ${where} and refund_status = 2
-    </select>
-    <select id="getRefundTotal" resultType="java.lang.Integer">
-        select count(id) from eb_store_order where ${where} and refund_status = 2
+    <select id="getWriteOffSummary" resultType="com.zbkj.common.response.SystemWriteOffOrderResponse">
+        select
+            coalesce(sum(case when refund_status = 0 then pay_price else 0 end), 0) as orderTotalPrice,
+            coalesce(sum(case when refund_status = 2 then refund_price else 0 end), 0) as refundTotalPrice,
+            coalesce(sum(case when refund_status = 2 then 1 else 0 end), 0) as refundTotal
+        from eb_store_order
+        where is_del = 0 and shipping_type = 2
+        <if test="startTime != null and startTime != ''">
+            and create_time between #{startTime} and #{endTime}
+        </if>
+        <if test="keywords != null and keywords != ''">
+            and (
+                real_name like concat('%', #{keywords}, '%')
+                or user_phone = #{keywords}
+                or order_id = #{keywords}
+                <if test="keywordId != null">
+                    or id = #{keywordId}
+                </if>
+            )
+        </if>
+        <if test="storeId != null and storeId > 0">
+            and store_id = #{storeId}
+        </if>
     </select>
     <select id="findFrontList" resultType="com.zbkj.common.model.order.StoreOrder" parameterType="Map">
         select * from eb_store_order

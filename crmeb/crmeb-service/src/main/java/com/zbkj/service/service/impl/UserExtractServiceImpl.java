@@ -202,20 +202,17 @@ public class UserExtractServiceImpl extends ServiceImpl<UserExtractDao, UserExtr
      * @return BigDecimal
      */
     private BigDecimal getSum(Integer userId, int status, String startTime, String endTime) {
-        LambdaQueryWrapper<UserExtract> lqw = Wrappers.lambdaQuery();
+        QueryWrapper<UserExtract> wrapper = new QueryWrapper<>();
+        wrapper.select("COALESCE(SUM(extract_price), 0) AS extract_price");
         if (null != userId) {
-            lqw.eq(UserExtract::getUid, userId);
+            wrapper.eq("uid", userId);
         }
-        lqw.eq(UserExtract::getStatus, status);
+        wrapper.eq("status", status);
         if (StringUtils.isNotBlank(startTime) && StringUtils.isNotBlank(endTime)) {
-            lqw.between(UserExtract::getCreateTime, startTime, endTime);
+            wrapper.between("create_time", startTime, endTime);
         }
-        List<UserExtract> userExtracts = dao.selectList(lqw);
-        BigDecimal sum = ZERO;
-        if (CollUtil.isNotEmpty(userExtracts)) {
-            sum = userExtracts.stream().map(UserExtract::getExtractPrice).reduce(ZERO, BigDecimal::add);
-        }
-        return sum;
+        UserExtract aggregate = dao.selectOne(wrapper);
+        return aggregate == null || aggregate.getExtractPrice() == null ? ZERO : aggregate.getExtractPrice();
     }
 
     /**

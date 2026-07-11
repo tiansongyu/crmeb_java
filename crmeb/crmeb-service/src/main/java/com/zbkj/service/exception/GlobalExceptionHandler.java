@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Objects;
@@ -115,7 +114,6 @@ public class GlobalExceptionHandler {
     @ResponseBody
     public <T> CommonResult<?> defaultExceptionHandler(HttpServletRequest request, Exception e) {
         doLog(request, e);
-        e.printStackTrace();
         if (e instanceof CrmebException) {
             return CommonResult.failed().setMessage(Objects.requireNonNull(e.getMessage()));
         }
@@ -123,7 +121,7 @@ public class GlobalExceptionHandler {
             return CommonResult.failed().setMessage(Objects.requireNonNull(e.getMessage()));
         }
         //未知错误
-        return CommonResult.failed().setMessage(e.getMessage());
+        return CommonResult.failed().setMessage("服务器内部错误，请稍后重试");
     }
 
     /**
@@ -137,12 +135,6 @@ public class GlobalExceptionHandler {
         // 异常的详情
         String expDetail = sw.toString();
 
-        try {
-            sw.close();
-        } catch (IOException ioException) {
-            log.error("异常日志：关闭异常详情Writer异常");
-        }
-
         // 异常的url
         String expUrl = request.getRequestURI();
 
@@ -154,11 +146,13 @@ public class GlobalExceptionHandler {
         String expType = e.getClass().getName();
 
         // 异常的类名
-        StackTraceElement stackTraceElement = e.getStackTrace()[0];
-        String expController = stackTraceElement.getClassName();
-
-        // 异常的方法名
-        String expMethod = stackTraceElement.getMethodName();
+        StackTraceElement[] stackTrace = e.getStackTrace();
+        String expController = e.getClass().getName();
+        String expMethod = "unknown";
+        if (stackTrace.length > 0) {
+            expController = stackTrace[0].getClassName();
+            expMethod = stackTrace[0].getMethodName();
+        }
 
         ExceptionLog exceptionLog = new ExceptionLog();
         exceptionLog.setExpUrl(expUrl);
@@ -169,6 +163,10 @@ public class GlobalExceptionHandler {
         exceptionLog.setExpMethod(expMethod);
         exceptionLog.setExpDetail(expDetail);
 
-        exceptionLogService.save(exceptionLog);
+        try {
+            exceptionLogService.save(exceptionLog);
+        } catch (Exception logException) {
+            log.error("保存异常日志失败，原始请求路径：{}", expUrl, logException);
+        }
     }
 }

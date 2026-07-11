@@ -1,15 +1,19 @@
 package com.zbkj.common.utils;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  *  Request工具类
@@ -23,13 +27,23 @@ import java.util.Objects;
  *  | Author: CRMEB Team <admin@crmeb.com>
  *  +----------------------------------------------------------------------
  */
-public class RequestUtil extends HttpServlet{
+@Slf4j
+public final class RequestUtil {
+
+    private static final String REDACTED = "***";
+    private static final Set<String> SENSITIVE_NAMES = new HashSet<>(Arrays.asList(
+            "authorization", "cookie", "set-cookie", "password", "pwd", "token", "access_token",
+            "refresh_token", "secret", "client_secret", "session_key", "encrypteddata", "iv",
+            "x-token", "x-api-key", "api-key"
+    ));
+
+    private RequestUtil() {
+    }
+
     public static HttpServletRequest getRequest() {
-        if(RequestContextHolder.getRequestAttributes() != null){
+        if (RequestContextHolder.getRequestAttributes() != null) {
             return ((ServletRequestAttributes) Objects.requireNonNull(RequestContextHolder.getRequestAttributes())).getRequest();
-
         }
-
         return null;
     }
     public static HashMap<String, Object> getRequestParamAndHeader(){
@@ -47,7 +61,7 @@ public class RequestUtil extends HttpServlet{
             if(paraNames != null){
                 for(Enumeration<String> enumeration =paraNames;enumeration.hasMoreElements();){
                     String key= enumeration.nextElement();
-                    requestParams.put(key, request.getParameter(key));
+                    requestParams.put(key, safeValue(key, request.getParameter(key)));
                 }
             }
 
@@ -57,12 +71,12 @@ public class RequestUtil extends HttpServlet{
                 for ( Enumeration<String> attributeNames1 = attributeNames; attributeNames1.hasMoreElements();) {
                     String key= attributeNames1.nextElement();
                     if(key.contains("request_")){
-                        requestFilter.put(key, request.getAttribute(key));
+                        requestFilter.put(key, safeValue(key, request.getAttribute(key)));
                     }
                 }
             }
 
-            data.put("url", request.getRequestURL());
+            data.put("url", request.getRequestURL().toString());
             data.put("uri", request.getRequestURI());
             data.put("method", request.getMethod());
             data.put("request", requestParams);
@@ -75,17 +89,21 @@ public class RequestUtil extends HttpServlet{
                 for(Enumeration<String> enumeration = headerNames;enumeration.hasMoreElements();){
                     String key= enumeration.nextElement();
                     String value=request.getHeader(key);
-                    headerParams.put(key, value);
+                    headerParams.put(key, safeValue(key, value));
                 }
             }
             data.put("header", headerParams);
 
 
             return data;
-        }catch (Exception e){
-            e.printStackTrace();
+        } catch (Exception e) {
+            log.warn("读取请求元数据失败", e);
             return null;
         }
+    }
+
+    private static Object safeValue(String name, Object value) {
+        return SENSITIVE_NAMES.contains(name.toLowerCase(Locale.ROOT)) ? REDACTED : value;
     }
 
     public static String getDomain(){

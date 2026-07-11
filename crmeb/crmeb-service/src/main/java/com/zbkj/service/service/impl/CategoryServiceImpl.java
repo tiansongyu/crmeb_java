@@ -3,7 +3,6 @@ package com.zbkj.service.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
-import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
@@ -22,6 +21,7 @@ import com.zbkj.common.request.CategorySearchRequest;
 import com.zbkj.service.dao.CategoryDao;
 import com.zbkj.service.service.CategoryService;
 import com.zbkj.service.service.SystemAttachmentService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -46,6 +46,7 @@ import java.util.stream.Collectors;
  *  +----------------------------------------------------------------------
 */
 @Service
+@Slf4j
 public class CategoryServiceImpl extends ServiceImpl<CategoryDao, Category> implements CategoryService {
 
     @Resource
@@ -172,8 +173,8 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, Category> impl
             }
 
             return true;
-        }catch (Exception e){
-            e.printStackTrace();
+        } catch (Exception e) {
+            log.error("更新分类失败，id={}", id, e);
             return false;
         }
     }
@@ -256,7 +257,6 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, Category> impl
      */
     @Override
     public List<CategoryTreeVo> getListTree(Integer type, Integer status, List<Integer> categoryIdList) {
-        System.out.println("菜单列表:getListTree: type:" + type + "| status:" + status + "| categoryIdList:" + JSON.toJSONString(categoryIdList));
         return getTree(type, status,null,categoryIdList);
     }
 
@@ -328,7 +328,6 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, Category> impl
                 list.add(tree);
             }
         }
-        System.out.println("无限极分类 : getTree:" + JSON.toJSONString(list));
         return list;
     }
 
@@ -453,4 +452,3 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, Category> impl
         return dao.selectList(lambdaQueryWrapper);
     }
 }
-

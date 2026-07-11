@@ -293,7 +293,7 @@ public final class CrmebDateUtil {
             }
 
         } catch (ParseException e) {
-            e.printStackTrace();
+            LOGGER.warn("日期比较失败，date1={}, date2={}, pattern={}", date1, date2, pattern, e);
             return 0;
         }
     }
@@ -331,7 +331,7 @@ public final class CrmebDateUtil {
         try {
             days = (sm.parse(sm.format(afterDay)).getTime() - sm.parse(sm.format(beforeDay)).getTime()) / (1000 * 3600 * 24);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.warn("日期天数计算失败，beforeDay={}, afterDay={}", beforeDay, afterDay, e);
         }
 
         return days;
@@ -699,12 +699,6 @@ public final class CrmebDateUtil {
             }
         }
         return parse.getTime();
-    }
-
-    public static void main(String[] args) {
-        DateLimitUtilVo dateLimit = getDateLimit(DateConstants.SEARCH_DATE_LATELY_7);
-        System.out.println(dateLimit.getStartTime());
-        System.out.println(dateLimit.getEndTime());
     }
 
     /**

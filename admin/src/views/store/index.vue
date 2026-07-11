@@ -702,7 +702,7 @@ export default {
       this.card_select_show = false;
       this.$modal.loading('正在保存到本地，请稍候...');
       this.$cache.local.setJSON('goods_stroge', this.checkedCities);
-      setTimeout(this.$modal.closeLoading(), 1000);
+      setTimeout(() => this.$modal.closeLoading(), 1000);
     },
   },
 };

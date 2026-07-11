@@ -45,9 +45,9 @@ public class WechatCallbackServiceImpl extends ServiceImpl<WechatCallbackDao, We
      */
     @Override
     public String callback(String request) {
-        System.out.println("微信小程序回调：" + request);
         JSONObject jsonObject = JSONObject.parseObject(request);
-        System.out.println("微信小程序回调jsonObject：" + jsonObject);
+        logger.debug("收到微信小程序回调，消息类型：{}，事件：{}",
+                jsonObject.getString("MsgType"), jsonObject.getString("Event"));
         WechatCallback wechatCallback = new WechatCallback();
         wechatCallback.setToUserName(jsonObject.getString("ToUserName"));
         wechatCallback.setFromUserName(jsonObject.getString("FromUserName"));
@@ -64,4 +64,3 @@ public class WechatCallbackServiceImpl extends ServiceImpl<WechatCallbackDao, We
 
 
 }
-

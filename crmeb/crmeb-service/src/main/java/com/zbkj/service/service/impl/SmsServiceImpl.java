@@ -145,13 +145,11 @@ public class SmsServiceImpl implements SmsService {
             param.add("phone", sendSmsVo.getMobile());
             param.add("temp_id", sendSmsVo.getTemplate());
             map.entrySet().stream().forEach(entry -> param.add(StrUtil.format(SmsConstants.SMS_COMMON_PARAM_FORMAT, entry.getKey()), entry.getValue()));
-            System.out.println("============发送短信=========header = " + header);
             result = restTemplateUtil.postFromUrlencoded(OnePassConstants.ONE_PASS_API_URL + OnePassConstants.ONE_PASS_API_SEND_URI, param, header);
             checkResult(result);
         } catch (Exception e) {
             //接口请求异常，需要重新发送
-            e.printStackTrace();
-            logger.error(e.getMessage());
+            logger.error("发送短信失败", e);
             return false;
         }
         return true;
@@ -587,12 +585,10 @@ public class SmsServiceImpl implements SmsService {
             param.add("temp_id", sendSmsVo.getTemplate());
 
             map.forEach((key, value) -> param.add(StrUtil.format(SmsConstants.SMS_COMMON_PARAM_FORMAT, key), value));
-            logger.info("============发送短信=========header = " + header);
             result = restTemplateUtil.postFromUrlencoded(OnePassConstants.ONE_PASS_API_URL + OnePassConstants.ONE_PASS_API_SEND_URI, param, header);
             checkResult(result);
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("发送短信失败：" + e.getMessage());
+            logger.error("发送短信失败", e);
             return false;
         }
         return true;

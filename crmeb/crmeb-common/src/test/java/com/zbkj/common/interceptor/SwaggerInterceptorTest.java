@@ -31,6 +31,21 @@ public class SwaggerInterceptorTest {
         assertTrue(interceptor.httpBasicAuth(null));
     }
 
+    @Test
+    public void rejectsMalformedBasicAuthWithoutThrowing() {
+        SwaggerInterceptor interceptor = new SwaggerInterceptor("admin", "secret", true);
+
+        assertFalse(interceptor.httpBasicAuth("Basic not-base64!"));
+        assertFalse(interceptor.httpBasicAuth("Bearer token"));
+    }
+
+    @Test
+    public void supportsColonInsidePassword() {
+        SwaggerInterceptor interceptor = new SwaggerInterceptor("admin", "sec:ret", true);
+
+        assertTrue(interceptor.httpBasicAuth(basicAuth("admin", "sec:ret")));
+    }
+
     private String basicAuth(String username, String password) {
         String credentials = username + ":" + password;
         return "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));

@@ -7,9 +7,9 @@ import com.zbkj.common.request.StoreOrderStaticsticsRequest;
 import com.zbkj.common.response.OrderBrokerageData;
 import com.zbkj.common.response.StoreOrderStatisticsChartItemResponse;
 import com.zbkj.common.response.StoreStaffDetail;
+import com.zbkj.common.response.SystemWriteOffOrderResponse;
 import org.apache.ibatis.annotations.Param;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -27,20 +27,11 @@ import java.util.Map;
  */
 public interface StoreOrderDao extends BaseMapper<StoreOrder> {
 
-    /**
-     * 订单总金额
-     */
-    BigDecimal getTotalPrice(String where);
-
-    /**
-     * 退款总金额
-     */
-    BigDecimal getRefundPrice(String where);
-
-    /**
-     * 获取退款总单数
-     */
-    Integer getRefundTotal(String where);
+    SystemWriteOffOrderResponse getWriteOffSummary(@Param("startTime") String startTime,
+                                                   @Param("endTime") String endTime,
+                                                   @Param("keywords") String keywords,
+                                                   @Param("keywordId") Integer keywordId,
+                                                   @Param("storeId") Integer storeId);
 
     List<StoreOrder> findFrontList(Map<String, Object> searchMap);
 

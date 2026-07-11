@@ -310,7 +310,6 @@ public class ProductUtils {
     public StoreProductRequest getSuningProductInfo(String url, int tag) throws JSONException, IOException {
         setConfig(url, tag);
         JSONObject tbJsonData = getRequestFromUrl(baseUrl + rightUrl);
-        System.out.println("tbJsonData:" + tbJsonData);
 //        JSONObject tbJsonData = new JSONObject(JSONExample.snJson); // just Test
         JSONObject data = tbJsonData.getJSONObject("data");
         if (null == data) throw new CrmebException("复制商品失败--返回数据格式错误--未找到data");

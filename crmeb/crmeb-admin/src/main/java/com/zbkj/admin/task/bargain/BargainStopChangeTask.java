@@ -37,8 +37,7 @@ public class BargainStopChangeTask {
         try {
             storeBargainService.stopAfterChange();
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("BargainStopChangeTask" + " | msg : " + e.getMessage());
+            logger.error("BargainStopChangeTask failed", e);
         }
     }
 

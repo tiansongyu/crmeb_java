@@ -6,12 +6,14 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
-import sun.misc.BASE64Decoder;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Objects;
 
 /**
  *  Swagger 文档
@@ -49,17 +51,29 @@ public class SwaggerInterceptor extends HandlerInterceptorAdapter {
         }
         return isAuthSuccess;
     }
-    public boolean httpBasicAuth(String authorization) throws IOException {
-        if(check){
-            if (authorization != null && authorization.split(" ").length == 2) {
-                String userAndPass = new String(new BASE64Decoder().decodeBuffer(authorization.split(" ")[1]));
-                String username = userAndPass.split(":").length == 2 ? userAndPass.split(":")[0] : null;
-                String password = userAndPass.split(":").length == 2 ? userAndPass.split(":")[1] : null;
-                return this.username.equals(username) && this.password.equals(password);
-            }
+    public boolean httpBasicAuth(String authorization) {
+        if (!Boolean.TRUE.equals(check)) {
+            return true;
+        }
+        if (authorization == null) {
             return false;
         }
-        return true;
+        String[] authParts = authorization.trim().split("\\s+", 2);
+        if (authParts.length != 2 || !"Basic".equalsIgnoreCase(authParts[0])) {
+            return false;
+        }
+        try {
+            String userAndPass = new String(Base64.getDecoder().decode(authParts[1]), StandardCharsets.UTF_8);
+            int separator = userAndPass.indexOf(':');
+            if (separator < 0) {
+                return false;
+            }
+            String requestUsername = userAndPass.substring(0, separator);
+            String requestPassword = userAndPass.substring(separator + 1);
+            return Objects.equals(this.username, requestUsername) && Objects.equals(this.password, requestPassword);
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
     }
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {

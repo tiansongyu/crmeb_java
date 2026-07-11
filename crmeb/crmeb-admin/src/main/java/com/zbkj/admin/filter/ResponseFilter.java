@@ -3,6 +3,7 @@ package com.zbkj.admin.filter;
 
 import com.zbkj.common.config.CrmebConfig;
 import com.zbkj.common.utils.RequestUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.web.FilterInvocation;
@@ -27,6 +28,7 @@ import java.nio.charset.StandardCharsets;
  * 返回值输出过滤器
  */
 //@Component
+@Slf4j
 public class ResponseFilter implements Filter {
 
 
@@ -53,15 +55,14 @@ public class ResponseFilter implements Filter {
             String str = new String(content, StandardCharsets.UTF_8);
 
             try {
-                HttpServletRequest req = (HttpServletRequest) servletRequest;
-                str = new ResponseRouter().filter(str, RequestUtil.getUri(req), crmebConfig);
+                str = new ResponseRouter().filter(str, RequestUtil.getUri(request), crmebConfig);
             } catch (Exception e) {
-                e.printStackTrace();
+                log.warn("响应内容过滤失败，uri={}", RequestUtil.getUri(request), e);
             }
             //把返回值输出到客户端
             ServletOutputStream outputStream = response.getOutputStream();
             if (str.length() > 0) {
-                outputStream.write(str.getBytes());
+                outputStream.write(str.getBytes(StandardCharsets.UTF_8));
                 outputStream.flush();
                 outputStream.close();
                 //最后添加这一句，输出到客户端

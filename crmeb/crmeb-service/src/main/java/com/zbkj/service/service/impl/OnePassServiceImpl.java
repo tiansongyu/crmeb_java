@@ -193,8 +193,7 @@ public class OnePassServiceImpl implements OnePassService {
         try {
             jsonObject = JSON.parseObject(com.zbkj.common.utils.OnePassUtil.decrypt(data));
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("一号通商家寄件 解密数据失败:{}", e.getMessage());
+            logger.error("一号通商家寄件解密数据失败", e);
         }
         switch (type){
             case "order_success":
@@ -296,7 +295,6 @@ public class OnePassServiceImpl implements OnePassService {
         MultiValueMap<String, Object> params = new LinkedMultiValueMap<>();
         params.add("url", url);
         JSONObject jsonObject = onePassUtil.postFrom(OnePassConstants.ONE_PASS_API_URL + OnePassConstants.ONE_PASS_API_COPY_GOODS_URI, params, header);
-        System.out.println("one pass copy product = " + jsonObject);
         return jsonObject.getJSONObject("data");
     }
 

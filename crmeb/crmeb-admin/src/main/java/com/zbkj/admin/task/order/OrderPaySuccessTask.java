@@ -39,8 +39,7 @@ public class OrderPaySuccessTask {
         try {
             orderTaskService.orderPaySuccessAfter();
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("OrderPaySuccessTask.task" + " | msg : " + e.getMessage());
+            logger.error("OrderPaySuccessTask failed", e);
         }
     }
 

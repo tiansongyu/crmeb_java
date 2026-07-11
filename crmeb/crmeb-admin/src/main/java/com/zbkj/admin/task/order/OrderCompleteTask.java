@@ -37,8 +37,7 @@ public class OrderCompleteTask {
             orderTaskService.complete();
 
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("OrderCompleteTask.task" + " | msg : " + e.getMessage());
+            logger.error("OrderCompleteTask failed", e);
         }
     }
 }

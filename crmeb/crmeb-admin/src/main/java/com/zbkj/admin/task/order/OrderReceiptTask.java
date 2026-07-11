@@ -36,8 +36,7 @@ public class OrderReceiptTask {
             orderTaskService.orderReceiving();
 
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("OrderReceiptTask.task" + " | msg : " + e.getMessage());
+            logger.error("OrderReceiptTask failed", e);
         }
     }
 

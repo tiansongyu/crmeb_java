@@ -34,8 +34,7 @@ public class AsyncWeChatPublicTempMessage {
             templateMessageService.consumePublic();
 
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("AsyncWeChatPublicTempMessage.task" + " | msg : " + e.getMessage());
+            logger.error("AsyncWeChatPublicTempMessage failed", e);
         }
 
     }

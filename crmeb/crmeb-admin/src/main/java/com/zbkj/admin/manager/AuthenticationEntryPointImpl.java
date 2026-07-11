@@ -21,15 +21,11 @@ public class AuthenticationEntryPointImpl implements AuthenticationEntryPoint, S
     private static final long serialVersionUID = -8970718410437077606L;
 
     @Override
-    public void commence(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, AuthenticationException e) {
+    public void commence(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, AuthenticationException e) throws IOException {
 //        String msg = StrUtil.format("请求访问：{}，认证失败，无法访问系统资源", httpServletRequest.getRequestURI());
         httpServletResponse.setStatus(200);
         httpServletResponse.setContentType("application/json");
         httpServletResponse.setCharacterEncoding("utf-8");
-        try {
-            httpServletResponse.getWriter().print(JSONObject.toJSONString(CommonResult.failed(CommonResultCode.UNAUTHORIZED)));
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        }
+        httpServletResponse.getWriter().print(JSONObject.toJSONString(CommonResult.failed(CommonResultCode.UNAUTHORIZED)));
     }
 }

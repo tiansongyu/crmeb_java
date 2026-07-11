@@ -55,7 +55,15 @@
 			},
 			bgColor: {
 				type: Object,
-				default: null
+				default: function() {
+					return {
+						bgColor: "",
+						Color: "",
+						width: "",
+						timeTxtwidth: "",
+						isDay: false
+					};
+				}
 			}
 		},
 		data: function() {
@@ -63,20 +71,35 @@
 				day: "00",
 				hour: "00",
 				minute: "00",
-				second: "00"
+				second: "00",
+				timer: null
 			};
+		},
+		watch: {
+			datatime: function() {
+				this.show_time();
+			}
 		},
 		created: function() {
 			this.show_time();
 		},
-		mounted: function() {},
+		beforeDestroy: function() {
+			this.clearTimer();
+		},
 		methods: {
+			clearTimer: function() {
+				if (this.timer) {
+					clearInterval(this.timer);
+					this.timer = null;
+				}
+			},
 			show_time: function() {
+				this.clearTimer();
 				let that = this;
 
 				function runTime() {
 					//时间函数
-					let intDiff = that.datatime - Date.parse(new Date()) / 1000; //获取数据中的时间戳的时间差；
+					let intDiff = that.datatime - Date.now() / 1000; //获取数据中的时间戳的时间差；
 					let day = 0,
 						hour = 0,
 						minute = 0,
@@ -107,10 +130,13 @@
 						that.hour = "00";
 						that.minute = "00";
 						that.second = "00";
+						that.clearTimer();
 					}
 				}
 				runTime();
-				setInterval(runTime, 1000);
+				if (this.datatime > Date.now() / 1000) {
+					this.timer = setInterval(runTime, 1000);
+				}
 			}
 		}
 	};

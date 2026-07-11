@@ -135,19 +135,14 @@ public class UserBrokerageRecordServiceImpl extends ServiceImpl<UserBrokerageRec
      */
     @Override
     public BigDecimal getYesterdayIncomes(Integer uid) {
-        LambdaQueryWrapper<UserBrokerageRecord> lqw = new LambdaQueryWrapper<>();
-        lqw.select(UserBrokerageRecord::getPrice);
-        lqw.eq(UserBrokerageRecord::getUid, uid);
+        QueryWrapper<UserBrokerageRecord> wrapper = new QueryWrapper<>();
+        wrapper.eq("uid", uid);
         DateLimitUtilVo dateLimit = CrmebDateUtil.getDateLimit(Constants.SEARCH_DATE_YESTERDAY);
-        lqw.between(UserBrokerageRecord::getUpdateTime, dateLimit.getStartTime(), dateLimit.getEndTime());
-        lqw.eq(UserBrokerageRecord::getType, 1);
-        lqw.eq(UserBrokerageRecord::getLinkType, "order");
-        lqw.eq(UserBrokerageRecord::getStatus, 3);
-        List<UserBrokerageRecord> recordList = dao.selectList(lqw);
-        if (CollUtil.isEmpty(recordList)) {
-            return BigDecimal.ZERO;
-        }
-        return recordList.stream().map(UserBrokerageRecord::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+        wrapper.between("update_time", dateLimit.getStartTime(), dateLimit.getEndTime());
+        wrapper.eq("type", BrokerageRecordConstants.BROKERAGE_RECORD_TYPE_ADD);
+        wrapper.eq("link_type", BrokerageRecordConstants.BROKERAGE_RECORD_LINK_TYPE_ORDER);
+        wrapper.eq("status", BrokerageRecordConstants.BROKERAGE_RECORD_STATUS_COMPLETE);
+        return sumPrice(wrapper);
     }
 
     /**
@@ -309,20 +304,15 @@ public class UserBrokerageRecordServiceImpl extends ServiceImpl<UserBrokerageRec
      */
     @Override
     public BigDecimal getTotalSpreadPriceBydateLimit(String dateLimit) {
-        LambdaQueryWrapper<UserBrokerageRecord> lqw = new LambdaQueryWrapper<>();
-        lqw.select(UserBrokerageRecord::getPrice);
-        lqw.eq(UserBrokerageRecord::getLinkType, BrokerageRecordConstants.BROKERAGE_RECORD_LINK_TYPE_ORDER);
-        lqw.eq(UserBrokerageRecord::getType, BrokerageRecordConstants.BROKERAGE_RECORD_TYPE_ADD);
-        lqw.eq(UserBrokerageRecord::getStatus, BrokerageRecordConstants.BROKERAGE_RECORD_STATUS_COMPLETE);
+        QueryWrapper<UserBrokerageRecord> wrapper = new QueryWrapper<>();
+        wrapper.eq("link_type", BrokerageRecordConstants.BROKERAGE_RECORD_LINK_TYPE_ORDER);
+        wrapper.eq("type", BrokerageRecordConstants.BROKERAGE_RECORD_TYPE_ADD);
+        wrapper.eq("status", BrokerageRecordConstants.BROKERAGE_RECORD_STATUS_COMPLETE);
         if (StrUtil.isNotBlank(dateLimit)) {
             DateLimitUtilVo dateLimitVo = CrmebDateUtil.getDateLimit(dateLimit);
-            lqw.between(UserBrokerageRecord::getUpdateTime, dateLimitVo.getStartTime(), dateLimitVo.getEndTime());
+            wrapper.between("update_time", dateLimitVo.getStartTime(), dateLimitVo.getEndTime());
         }
-        List<UserBrokerageRecord> list = dao.selectList(lqw);
-        if (CollUtil.isEmpty(list)) {
-            return BigDecimal.ZERO;
-        }
-        return list.stream().map(UserBrokerageRecord::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return sumPrice(wrapper);
     }
 
     /**
@@ -332,19 +322,14 @@ public class UserBrokerageRecordServiceImpl extends ServiceImpl<UserBrokerageRec
      */
     @Override
     public BigDecimal getSubSpreadPriceByDateLimit(String dateLimit) {
-        LambdaQueryWrapper<UserBrokerageRecord> lqw = new LambdaQueryWrapper<>();
-        lqw.select(UserBrokerageRecord::getPrice);
-        lqw.eq(UserBrokerageRecord::getType, BrokerageRecordConstants.BROKERAGE_RECORD_TYPE_SUB);
-        lqw.eq(UserBrokerageRecord::getStatus, BrokerageRecordConstants.BROKERAGE_RECORD_STATUS_COMPLETE);
+        QueryWrapper<UserBrokerageRecord> wrapper = new QueryWrapper<>();
+        wrapper.eq("type", BrokerageRecordConstants.BROKERAGE_RECORD_TYPE_SUB);
+        wrapper.eq("status", BrokerageRecordConstants.BROKERAGE_RECORD_STATUS_COMPLETE);
         if (StrUtil.isNotBlank(dateLimit)) {
             DateLimitUtilVo dateLimitVo = CrmebDateUtil.getDateLimit(dateLimit);
-            lqw.between(UserBrokerageRecord::getUpdateTime, dateLimitVo.getStartTime(), dateLimitVo.getEndTime());
+            wrapper.between("update_time", dateLimitVo.getStartTime(), dateLimitVo.getEndTime());
         }
-        List<UserBrokerageRecord> list = dao.selectList(lqw);
-        if (CollUtil.isEmpty(list)) {
-            return BigDecimal.ZERO;
-        }
-        return list.stream().map(UserBrokerageRecord::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return sumPrice(wrapper);
     }
 
     /**
@@ -354,16 +339,17 @@ public class UserBrokerageRecordServiceImpl extends ServiceImpl<UserBrokerageRec
      */
     @Override
     public BigDecimal getFreezePrice(Integer uid) {
-        LambdaQueryWrapper<UserBrokerageRecord> lqw = new LambdaQueryWrapper<>();
-        lqw.select(UserBrokerageRecord::getPrice);
-        lqw.eq(UserBrokerageRecord::getUid, uid);
-        lqw.eq(UserBrokerageRecord::getLinkType, BrokerageRecordConstants.BROKERAGE_RECORD_LINK_TYPE_ORDER);
-        lqw.eq(UserBrokerageRecord::getStatus, BrokerageRecordConstants.BROKERAGE_RECORD_STATUS_FROZEN);
-        List<UserBrokerageRecord> list = dao.selectList(lqw);
-        if (CollUtil.isEmpty(list)) {
-            return BigDecimal.ZERO;
-        }
-        return list.stream().map(UserBrokerageRecord::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+        QueryWrapper<UserBrokerageRecord> wrapper = new QueryWrapper<>();
+        wrapper.eq("uid", uid);
+        wrapper.eq("link_type", BrokerageRecordConstants.BROKERAGE_RECORD_LINK_TYPE_ORDER);
+        wrapper.eq("status", BrokerageRecordConstants.BROKERAGE_RECORD_STATUS_FROZEN);
+        return sumPrice(wrapper);
+    }
+
+    private BigDecimal sumPrice(QueryWrapper<UserBrokerageRecord> wrapper) {
+        wrapper.select("COALESCE(SUM(price), 0) AS price");
+        UserBrokerageRecord aggregate = dao.selectOne(wrapper);
+        return aggregate == null || aggregate.getPrice() == null ? BigDecimal.ZERO : aggregate.getPrice();
     }
 
     /**

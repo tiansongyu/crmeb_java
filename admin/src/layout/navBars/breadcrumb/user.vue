@@ -33,14 +33,13 @@
 <script>
 import screenfull from 'screenfull';
 import { Session, Local } from '@/utils/storage.js';
-import UserNews from '@/layout/navBars/breadcrumb/userNews.vue';
 import Search from '@/layout/navBars/breadcrumb/search.vue';
 import Cookies from 'js-cookie';
 // todo 消息
 import { editFormApi } from '@/api/user';
 export default {
   name: 'layoutBreadcrumbUser',
-  components: { UserNews, Search },
+  components: { Search },
   data() {
     return {
       isScreenfull: false,
@@ -95,8 +94,6 @@ export default {
     },
     // 全屏点击
     onScreenfullClick() {
-      console.log(screenfull);
-
       if (!screenfull.isEnabled) {
         this.$message.warning('暂不不支持全屏');
         return false;

@@ -33,8 +33,7 @@ public class OrderAutoReceiptTask {
         try {
             orderTaskService.autoTakeDelivery();
         } catch (Exception e) {
-            e.printStackTrace();
-            LOGGER.error("OrderAutoReceiptTask.exception" + " | msg : " + e.getMessage());
+            LOGGER.error("OrderAutoReceiptTask failed", e);
         }
     }
 

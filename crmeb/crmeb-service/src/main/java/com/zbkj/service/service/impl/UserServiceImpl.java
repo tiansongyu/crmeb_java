@@ -131,7 +131,6 @@ public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserS
     @Override
     public PageInfo<UserResponse> getList(UserSearchRequest request, PageParamRequest pageParamRequest) {
         Page<User> pageUser = PageHelper.startPage(pageParamRequest.getPage(), pageParamRequest.getLimit());
-        LambdaQueryWrapper<User> lambdaQueryWrapper = new LambdaQueryWrapper<>();
         Map<String, Object> map = CollUtil.newHashMap();
 
         if (request.getIsPromoter() != null) {
@@ -144,8 +143,7 @@ public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserS
         }
 
         if (!StringUtils.isBlank(request.getLabelId())) {
-            String tagIdSql = CrmebUtil.getFindInSetSql("u.tag_id", request.getLabelId());
-            map.put("tagIdSql", tagIdSql);
+            map.put("tagIdList", CrmebUtil.stringToArray(request.getLabelId()));
         }
 
         if (StrUtil.isNotBlank(request.getLevel())) {
@@ -158,14 +156,13 @@ public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserS
         }
 
         if (StringUtils.isNotBlank(request.getSex())) {
-            lambdaQueryWrapper.eq(User::getSex, request.getSex());
             map.put("sex", Integer.valueOf(request.getSex()));
         }
 
         if (StringUtils.isNotBlank(request.getCountry())) {
             map.put("country", request.getCountry());
             // 根据省市查询
-            if (StrUtil.isNotBlank(request.getCity())) {
+            if (StrUtil.isNotBlank(request.getProvince()) && StrUtil.isNotBlank(request.getCity())) {
                 request.setProvince(request.getProvince().replace("省", ""));
                 request.setCity(request.getCity().replace("市", ""));
                 map.put("addres", request.getProvince() + "," + request.getCity());
@@ -191,19 +188,44 @@ public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserS
             map.put("keywords", request.getKeywords());
         }
         List<User> userList = userDao.findAdminList(map);
+        Set<Integer> groupIds = new HashSet<>();
+        Set<Integer> tagIds = new HashSet<>();
+        Set<Integer> spreadUids = new HashSet<>();
+        for (User user : userList) {
+            if (StringUtils.isNotBlank(user.getGroupId())) {
+                groupIds.addAll(CrmebUtil.stringToArray(user.getGroupId()));
+            }
+            if (StringUtils.isNotBlank(user.getTagId())) {
+                tagIds.addAll(CrmebUtil.stringToArray(user.getTagId()));
+            }
+            if (user.getSpreadUid() != null && user.getSpreadUid() > 0) {
+                spreadUids.add(user.getSpreadUid());
+            }
+        }
+
+        Map<Integer, String> groupNameMap = groupIds.isEmpty() ? Collections.emptyMap()
+                : userGroupService.listByIds(groupIds).stream().collect(Collectors.toMap(
+                        UserGroup::getId, UserGroup::getGroupName, (first, ignored) -> first));
+        Map<Integer, String> tagNameMap = tagIds.isEmpty() ? Collections.emptyMap()
+                : userTagService.listByIds(tagIds).stream().collect(Collectors.toMap(
+                        UserTag::getId, UserTag::getName, (first, ignored) -> first));
+        Map<Integer, User> spreadUserMap = spreadUids.isEmpty() ? Collections.emptyMap()
+                : userDao.selectBatchIds(spreadUids).stream().collect(Collectors.toMap(
+                        User::getUid, user -> user, (first, ignored) -> first));
+
         List<UserResponse> userResponses = new ArrayList<>();
         for (User user : userList) {
             UserResponse userResponse = new UserResponse();
             BeanUtils.copyProperties(user, userResponse);
             // 获取分组信息
             if (!StringUtils.isBlank(user.getGroupId())) {
-                userResponse.setGroupName(userGroupService.getGroupNameInId(user.getGroupId()));
+                userResponse.setGroupName(joinNames(user.getGroupId(), groupNameMap));
                 userResponse.setGroupId(user.getGroupId());
             }
 
             // 获取标签信息
             if (!StringUtils.isBlank(user.getTagId())) {
-                userResponse.setTagName(userTagService.getGroupNameInId(user.getTagId()));
+                userResponse.setTagName(joinNames(user.getTagId(), tagNameMap));
                 userResponse.setTagId(user.getTagId());
             }
 
@@ -211,12 +233,23 @@ public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserS
             if (null == user.getSpreadUid() || user.getSpreadUid() == 0) {
                 userResponse.setSpreadNickname("无");
             } else {
-                userResponse.setSpreadNickname(userDao.selectById(user.getSpreadUid()).getNickname());
+                User spreadUser = spreadUserMap.get(user.getSpreadUid());
+                userResponse.setSpreadNickname(spreadUser == null ? "无" : spreadUser.getNickname());
             }
             userResponse.setPhone(CrmebUtil.maskMobile(userResponse.getPhone()));
             userResponses.add(userResponse);
         }
         return CommonPage.copyPageInfo(pageUser, userResponses);
+    }
+
+    private String joinNames(String idValue, Map<Integer, String> nameMap) {
+        return CrmebUtil.stringToArray(idValue).stream()
+                .distinct()
+                .sorted(Comparator.reverseOrder())
+                .map(nameMap::get)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.joining(","));
     }
 
     /**
@@ -694,14 +727,14 @@ public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserS
         Map<String, Object> map = new HashMap<>();
         map.put("userIdList", userIdList.stream().distinct().collect(Collectors.toList()));
         if (StringUtils.isNotBlank(keywords)) {
-            map.put("keywords", "%" + keywords + "%");
+            map.put("keywords", keywords);
         }
         map.put("sortKey", "create_time");
         if (StringUtils.isNotBlank(sortKey)) {
             map.put("sortKey", sortKey);
         }
         map.put("sortValue", Constants.SORT_DESC);
-        if (isAsc.toLowerCase().equals(Constants.SORT_ASC)) {
+        if (Constants.SORT_ASC.equalsIgnoreCase(isAsc)) {
             map.put("sortValue", Constants.SORT_ASC);
         }
 

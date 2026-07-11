@@ -12,26 +12,40 @@ export default {
   data() {
     return {
       disabled: false,
-      text: "获取验证码"
+      text: "获取验证码",
+      verifyCodeTimer: null
     };
+  },
+  beforeDestroy() {
+    this.clearVerifyCodeTimer();
+  },
+  onUnload() {
+    this.clearVerifyCodeTimer();
   },
   methods: {
     sendCode() {
       if (this.disabled) return;
       this.disabled = true;
-      let n = 60;
-      this.text = "剩余 " + n + "s";
-      const run = setInterval(() => {
-        n = n - 1;
-        if (n < 0) {
-          clearInterval(run);
-        }
-        this.text = "剩余 " + n + "s";
-        if (this.text < "剩余 " + 0 + "s") {
+      this.clearVerifyCodeTimer();
+      const expiresAt = Date.now() + 60 * 1000;
+      const update = () => {
+        const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+        if (remaining === 0) {
+          this.clearVerifyCodeTimer();
           this.disabled = false;
           this.text = "重新获取";
+          return;
         }
-      }, 1000);
+        this.text = "剩余 " + remaining + "s";
+      };
+      update();
+      this.verifyCodeTimer = setInterval(update, 1000);
+    },
+    clearVerifyCodeTimer() {
+      if (this.verifyCodeTimer) {
+        clearInterval(this.verifyCodeTimer);
+        this.verifyCodeTimer = null;
+      }
     }
   }
 };

@@ -239,8 +239,7 @@ public class StoreBargainUserHelpServiceImpl extends ServiceImpl<StoreBargainUse
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            log.error("砍价成功发送微信消息失败：" + e.getMessage());
+            log.error("砍价成功后发送微信消息失败，bargainUserId=" + storeBargainUser.getId(), e);
         }
         map.put("bargainPrice", bargainPrice);
         return map;
@@ -424,4 +423,3 @@ public class StoreBargainUserHelpServiceImpl extends ServiceImpl<StoreBargainUse
         return dao.selectCount(lambdaQueryWrapper);
     }
 }
-

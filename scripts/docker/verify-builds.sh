@@ -13,9 +13,7 @@ docker run --rm \
   -v "${ROOT_DIR}/crmeb:/workspace" \
   -w /workspace \
   "${MAVEN_IMAGE}" \
-  mvn -pl crmeb-common,crmeb-service \
-    -Dtest=PaymentModeUtilTest,PaymentModeServiceImplTest,OrderServiceImplTest,ProductImportServiceImplTest,StoreBargainServiceImplTest,StoreCombinationServiceImplTest,SwaggerInterceptorTest \
-    test
+  mvn -pl crmeb-common,crmeb-service test
 
 docker build \
   -f "${ROOT_DIR}/crmeb/Dockerfile" \

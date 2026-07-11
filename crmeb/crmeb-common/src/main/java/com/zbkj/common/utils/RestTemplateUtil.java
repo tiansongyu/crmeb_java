@@ -2,19 +2,17 @@ package com.zbkj.common.utils;
 
 import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson.JSONObject;
-import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.config.RegistryBuilder;
-import org.apache.http.conn.socket.ConnectionSocketFactory;
-import org.apache.http.conn.socket.PlainConnectionSocketFactory;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.conn.ssl.DefaultHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
@@ -26,6 +24,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
@@ -50,10 +49,15 @@ import java.util.Objects;
  */
 
 @Component
+@Slf4j
 public class RestTemplateUtil {
 
+    private final RestTemplate restTemplate;
+
     @Autowired
-    private RestTemplate restTemplate;
+    public RestTemplateUtil(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     public static final String WXPAYSDK_VERSION = "WXPaySDK/3.0.9";
     public static final String USER_AGENT = WXPAYSDK_VERSION +
@@ -126,7 +130,7 @@ public class RestTemplateUtil {
 
         HttpHeaders headers = new HttpHeaders();
         headers.add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36");
-        headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
         for (Map.Entry<String, String> entry : hashMap.entrySet()) {
             headers.add(entry.getKey(), entry.getValue());
@@ -151,13 +155,13 @@ public class RestTemplateUtil {
 
         HttpHeaders headers = new HttpHeaders();
 
-        headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
         headers.add("Accept", MediaType.APPLICATION_JSON.toString());
 
-        HttpEntity<JSONObject> requestEntity = new HttpEntity<JSONObject>(param, headers);
+        HttpEntity<JSONObject> requestEntity = new HttpEntity<>(param, headers);
 
-        return restTemplate.postForEntity(url, param, String.class).getBody();
+        return restTemplate.postForEntity(url, requestEntity, String.class).getBody();
 
     }
 
@@ -192,7 +196,7 @@ public class RestTemplateUtil {
     public JSONObject postJsonDataAndReturnJson(String url, JSONObject param) {
         HttpHeaders headers = new HttpHeaders();
 
-        headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+        headers.setContentType(MediaType.APPLICATION_JSON);
         headers.add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36");
 
         headers.add("Accept", MediaType.APPLICATION_JSON.toString());
@@ -215,7 +219,7 @@ public class RestTemplateUtil {
     public JSONObject post(String url) {
         HttpHeaders headers = new HttpHeaders();
 
-        headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+        headers.setContentType(MediaType.APPLICATION_JSON);
         headers.add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36");
 
         headers.add("Accept", MediaType.APPLICATION_JSON.toString());
@@ -244,9 +248,9 @@ public class RestTemplateUtil {
 
         ResponseEntity<String> responseEntity = restTemplate.postForEntity(url, requestEntity, String.class);
         try{
-            System.out.println("responseEntity"+responseEntity);
-            return new String(Objects.requireNonNull(responseEntity.getBody()).getBytes("UTF-8"), StandardCharsets.UTF_8);
+            return Objects.requireNonNull(responseEntity.getBody());
         }catch (Exception e){
+            log.error("XML response body is empty for {}", url, e);
             return "";
         }
     }
@@ -261,12 +265,9 @@ public class RestTemplateUtil {
     public String postWXRefundXml(String url, String xml, String mchId, String path) throws Exception {
         KeyStore clientStore = KeyStore.getInstance("PKCS12");
         // 读取本机存放的PKCS12证书文件
-        FileInputStream instream = new FileInputStream(path);
-        try {
+        try (InputStream instream = new FileInputStream(path)) {
             // 指定PKCS12的密码(商户ID)
             clientStore.load(instream, mchId.toCharArray());
-        } finally {
-            instream.close();
         }
 
         // 实例化密钥库 & 初始化密钥工厂
@@ -283,18 +284,8 @@ public class RestTemplateUtil {
 //                null,
                 new DefaultHostnameVerifier());
 
-        BasicHttpClientConnectionManager connManager = new BasicHttpClientConnectionManager(
-                RegistryBuilder.<ConnectionSocketFactory>create()
-                        .register("http", PlainConnectionSocketFactory.getSocketFactory())
-                        .register("https", sslConnectionSocketFactory)
-                        .build(),
-                null,
-                null,
-                null
-        );
-
-        HttpClient httpClient = HttpClientBuilder.create()
-                .setConnectionManager(connManager)
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setSSLSocketFactory(sslConnectionSocketFactory)
                 .build();
 
         HttpPost httpPost = new HttpPost(url);
@@ -307,9 +298,11 @@ public class RestTemplateUtil {
         httpPost.addHeader("User-Agent", USER_AGENT + " " + mchId);
         httpPost.setEntity(postEntity);
 
-        HttpResponse httpResponse = httpClient.execute(httpPost);
-        org.apache.http.HttpEntity httpEntity = httpResponse.getEntity();
-        return EntityUtils.toString(httpEntity, "UTF-8");
+        try (CloseableHttpClient closeableHttpClient = httpClient;
+             CloseableHttpResponse httpResponse = closeableHttpClient.execute(httpPost)) {
+            org.apache.http.HttpEntity httpEntity = httpResponse.getEntity();
+            return EntityUtils.toString(httpEntity, StandardCharsets.UTF_8);
+        }
     }
 
     /**
@@ -354,12 +347,7 @@ public class RestTemplateUtil {
         HttpEntity<Map<String, Object>> requestEntity =
                 new HttpEntity<>(params, headers);
 
-        String body1 = restTemplate.postForEntity( url, requestEntity, String.class).getBody();
-
-
-        System.out.println(body1);
-
-        return  body1;
+        return restTemplate.postForEntity(url, requestEntity, String.class).getBody();
 
     }
 
@@ -378,12 +366,7 @@ public class RestTemplateUtil {
         HttpEntity<Map<String, Object>> requestEntity =
                 new HttpEntity<>(params, headers);
 
-        String body1 = restTemplate.postForEntity( url, requestEntity, String.class).getBody();
-
-
-        System.out.println(body1);
-
-        return  body1;
+        return restTemplate.postForEntity(url, requestEntity, String.class).getBody();
 
     }
 
@@ -399,25 +382,20 @@ public class RestTemplateUtil {
         HttpEntity<String> requestEntity =
                 new HttpEntity<>(data, headers);
 
-        String body1 = restTemplate.postForEntity(url, requestEntity, String.class).getBody();
-
-
-        System.out.println(body1);
-
-        return body1;
+        return restTemplate.postForEntity(url, requestEntity, String.class).getBody();
 
     }
 
     public byte[] postJsonDataAndReturnBuffer(String url, JSONObject param) {
         HttpHeaders headers = new HttpHeaders();
 
-        headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
         headers.add("Accept", MediaType.APPLICATION_JSON.toString());
 
-        HttpEntity<JSONObject> requestEntity = new HttpEntity<JSONObject>(param, headers);
+        HttpEntity<JSONObject> requestEntity = new HttpEntity<>(param, headers);
 
-        return restTemplate.postForEntity(url, param, byte[].class).getBody();
+        return restTemplate.postForEntity(url, requestEntity, byte[].class).getBody();
     }
 
 

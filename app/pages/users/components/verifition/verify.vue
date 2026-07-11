@@ -94,32 +94,29 @@
 		mounted() {
 			this.uuid()
 			// #ifdef H5
-			document.addEventListener("touchmove", (e) => {
-				e.stopPropagation = true
-				//e.preventDefalut()
-			}, {
-				passive: false
-			});
-
-
-			var startX, startY;
-			document.addEventListener("touchstart", (e) => {
-
-				startX = e.targetTouches[0].pageX;
-				startY = e.targetTouches[0].pageY;
-			});
-
-			document.addEventListener("touchmove", (e) => {
-
-				var moveX = e.targetTouches[0].pageX;
-				var moveY = e.targetTouches[0].pageY;
-
-				if (Math.abs(moveX - startX) > Math.abs(moveY - startY)) {
+			this._verifyTouchStartHandler = (e) => {
+				if (!this.showBox || !e.targetTouches.length) return;
+				this._verifyTouchStartX = e.targetTouches[0].pageX;
+				this._verifyTouchStartY = e.targetTouches[0].pageY;
+			};
+			this._verifyTouchMoveHandler = (e) => {
+				if (!this.showBox || !e.targetTouches.length || this._verifyTouchStartX === undefined) return;
+				const moveX = e.targetTouches[0].pageX;
+				const moveY = e.targetTouches[0].pageY;
+				if (Math.abs(moveX - this._verifyTouchStartX) > Math.abs(moveY - this._verifyTouchStartY)) {
 					e.preventDefault();
 				}
-			}, {
+			};
+			document.addEventListener("touchstart", this._verifyTouchStartHandler);
+			document.addEventListener("touchmove", this._verifyTouchMoveHandler, {
 				passive: false,
 			});
+			// #endif
+		},
+		beforeDestroy() {
+			// #ifdef H5
+			document.removeEventListener("touchstart", this._verifyTouchStartHandler);
+			document.removeEventListener("touchmove", this._verifyTouchMoveHandler);
 			// #endif
 		},
 		methods: {

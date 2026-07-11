@@ -346,8 +346,7 @@ public class OrderPayServiceImpl implements OrderPayService {
                 ylyPrintService.YlyPrint(storeOrder.getOrderId(),true);
 
             } catch (Exception e) {
-                e.printStackTrace();
-                logger.error("短信、模板通知、优惠券或打印小票异常");
+                logger.error("短信、模板通知、优惠券或打印小票处理异常，orderId={}", storeOrder.getOrderId(), e);
             }
         }
         return execute;

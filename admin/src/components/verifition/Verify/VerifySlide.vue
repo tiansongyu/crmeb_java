@@ -165,7 +165,29 @@ export default {
       return false;
     };
   },
+  beforeDestroy() {
+    this.unbindWindowEvents();
+    if (this.$el) this.$el.onselectstart = null;
+  },
   methods: {
+    bindWindowEvents() {
+      if (!this._verifyMoveHandler) {
+        this._verifyMoveHandler = (event) => this.move(event);
+        this._verifyEndHandler = () => this.end();
+      }
+      this.unbindWindowEvents();
+      window.addEventListener('touchmove', this._verifyMoveHandler);
+      window.addEventListener('mousemove', this._verifyMoveHandler);
+      window.addEventListener('touchend', this._verifyEndHandler);
+      window.addEventListener('mouseup', this._verifyEndHandler);
+    },
+    unbindWindowEvents() {
+      if (!this._verifyMoveHandler) return;
+      window.removeEventListener('touchmove', this._verifyMoveHandler);
+      window.removeEventListener('mousemove', this._verifyMoveHandler);
+      window.removeEventListener('touchend', this._verifyEndHandler);
+      window.removeEventListener('mouseup', this._verifyEndHandler);
+    },
     init() {
       this.text = this.explain;
       this.getPictrue();
@@ -177,37 +199,7 @@ export default {
         this.$parent.$emit('ready', this);
       });
 
-      var _this = this;
-
-      window.removeEventListener('touchmove', function (e) {
-        _this.move(e);
-      });
-      window.removeEventListener('mousemove', function (e) {
-        _this.move(e);
-      });
-
-      // 鼠标松开
-      window.removeEventListener('touchend', function () {
-        _this.end();
-      });
-      window.removeEventListener('mouseup', function () {
-        _this.end();
-      });
-
-      window.addEventListener('touchmove', function (e) {
-        _this.move(e);
-      });
-      window.addEventListener('mousemove', function (e) {
-        _this.move(e);
-      });
-
-      // 鼠标松开
-      window.addEventListener('touchend', function () {
-        _this.end();
-      });
-      window.addEventListener('mouseup', function () {
-        _this.end();
-      });
+      this.bindWindowEvents();
     },
 
     // 鼠标按下

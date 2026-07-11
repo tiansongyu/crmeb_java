@@ -209,7 +209,7 @@ public class OrderTaskServiceImpl implements OrderTaskService {
                     redisUtil.lPush(redisKey, data);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("订单支付成功后置任务失败，orderNo={}", data, e);
                 redisUtil.lPush(redisKey, data);
             }
         }
@@ -243,7 +243,7 @@ public class OrderTaskServiceImpl implements OrderTaskService {
                     redisUtil.lPush(redisKey, data);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("订单自动取消任务失败，orderNo={}", data, e);
                 redisUtil.lPush(redisKey, data);
             }
         }
@@ -342,7 +342,7 @@ public class OrderTaskServiceImpl implements OrderTaskService {
             }
             order.setStatus(Constants.ORDER_STATUS_INT_COMPLETE);
             Boolean execute = transactionTemplate.execute(e -> {
-                System.out.println("操作的订单ID：" + order.getId());
+                logger.debug("自动完成订单，orderId={}", order.getId());
                 order.setUpdateTime(DateUtil.date());
                 storeOrderService.updateById(order);
                 storeProductReplyService.saveBatch(replyList);

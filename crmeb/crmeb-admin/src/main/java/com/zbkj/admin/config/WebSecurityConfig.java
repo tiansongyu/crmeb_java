@@ -116,6 +116,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
             .antMatchers("/api/admin/getLoginPic").permitAll()
             .antMatchers("/api/admin/login/account/detection").permitAll()
             .antMatchers("/api/admin/validate/code/getcaptchaconfig").permitAll()
+            // 仅放行健康状态，供 Docker、负载均衡和部署探针检查服务就绪状态。
+            .antMatchers("/actuator/health").permitAll()
                 // 放行资源路径
             .antMatchers("/"+ UploadConstants.UPLOAD_FILE_KEYWORD +"/**").permitAll()
             .antMatchers("/"+ UploadConstants.DOWNLOAD_FILE_KEYWORD +"/**").permitAll()

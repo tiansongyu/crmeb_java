@@ -41,7 +41,6 @@ public class WxUtil {
             }
         } catch (Exception e) {
             result = "";
-            e.printStackTrace();
         }
         return result;
     }

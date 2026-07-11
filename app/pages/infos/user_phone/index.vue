@@ -70,17 +70,27 @@
 				toLogin();
 			}
 		},
+		onUnload() {
+			this.clearPhoneTimer();
+		},
+		beforeDestroy() {
+			this.clearPhoneTimer();
+		},
 		methods: {
 			getTimes(){
-				this.nums = this.nums - 1;
-				this.text = "剩余 " + this.nums + "s";
-				if (this.nums < 0) {
-				  clearInterval(this.timer);
+				this.nums -= 1;
+				if (this.nums <= 0) {
+					this.clearPhoneTimer();
+					this.disabled = false;
+					this.text = "重新获取";
+					return;
 				}
 				this.text = "剩余 " + this.nums + "s";
-				if (this.text < "剩余 " + 0 + "s") {
-				  this.disabled = false;
-				  this.text = "重新获取";
+			},
+			clearPhoneTimer() {
+				if (this.timer) {
+					clearInterval(this.timer);
+					this.timer = null;
 				}
 			},
 			onLoadFun:function(){},
@@ -167,12 +177,8 @@
 			 * 
 			 */
 			async code() {
-				this.nums = 60;
-				uni.showLoading({
-					title: '加载中',
-					mask: true
-				});
 				let that = this;
+				if (that.disabled) return;
 				if(!that.isNew){
 					if (!that.phone) return that.$util.Tips({
 						title: '请填写手机号码！'
@@ -181,20 +187,28 @@
 						title: '请输入正确的手机号码！'
 					});
 				}
-				await registerVerify(that.isNew?that.userInfo.phone:that.phone).then(res => {
+				that.nums = 60;
+				that.disabled = true;
+				uni.showLoading({
+					title: '加载中',
+					mask: true
+				});
+				try {
+					const res = await registerVerify(that.isNew ? that.userInfo.phone : that.phone);
 					that.$util.Tips({
 						title: res.message
 					});
-					
+					that.clearPhoneTimer();
+					that.text = "剩余 60s";
 					that.timer = setInterval(that.getTimes, 1000);
-					 that.disabled = true;
-					 uni.hideLoading();
-				}).catch(err => {
-					return that.$util.Tips({
+				} catch (err) {
+					that.disabled = false;
+					that.$util.Tips({
 						title: err
 					});
+				} finally {
 					uni.hideLoading();
-				});
+				}
 			}
 		}
 	}

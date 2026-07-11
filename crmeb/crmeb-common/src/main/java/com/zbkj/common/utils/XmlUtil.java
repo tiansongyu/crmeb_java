@@ -3,17 +3,14 @@ package com.zbkj.common.utils;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.naming.NoNameCoder;
 import com.thoughtworks.xstream.io.xml.Xpp3Driver;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.Element;
-import org.dom4j.io.SAXReader;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.w3c.dom.Text;
 import org.xml.sax.InputSource;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -21,9 +18,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -38,29 +33,22 @@ import java.util.Map;
  * | Author: CRMEB Team <admin@crmeb.com>
  * +----------------------------------------------------------------------
  */
+@Slf4j
 public class XmlUtil {
     public static Map<String, String> xmlToMap(HttpServletRequest request) {
         Map<String, String> map = new HashMap<>();
-        SAXReader reader = new SAXReader();
-
-        InputStream in = null;
-        try {
-            in = request.getInputStream();
-            Document doc = reader.read(in);
-            Element root = doc.getRootElement();
-            List<Element> list = root.elements();
-            for (Element element : list) {
-                map.put(element.getName(), element.getText());
+        try (InputStream in = request.getInputStream()) {
+            DocumentBuilder documentBuilder = WXPayXmlUtil.newDocumentBuilder();
+            org.w3c.dom.Document document = documentBuilder.parse(in);
+            NodeList nodeList = document.getDocumentElement().getChildNodes();
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                Node node = nodeList.item(i);
+                if (node.getNodeType() == Node.ELEMENT_NODE) {
+                    map.put(node.getNodeName(), node.getTextContent());
+                }
             }
-        } catch (IOException | DocumentException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                assert in != null;
-                in.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        } catch (Exception e) {
+            log.warn("Unable to parse XML request: {}", e.getMessage());
         }
         return map;
     }
@@ -92,11 +80,10 @@ public class XmlUtil {
 //    }
 
     public static HashMap<String, Object> xmlToMap(String strxml) {
-        strxml = strxml.replaceFirst("encoding=\".*\"", "encoding=\"UTF-8\"");
-
         if (StringUtils.isBlank(strxml)) {
-            return null;
+            return new HashMap<>();
         }
+        strxml = strxml.replaceFirst("encoding=\"[^\"]*\"", "encoding=\"UTF-8\"");
         HashMap<String, Object> map = new HashMap<>();
         try {
             DocumentBuilder documentBuilder = WXPayXmlUtil.newDocumentBuilder();
@@ -110,7 +97,7 @@ public class XmlUtil {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.warn("Unable to parse XML content: {}", e.getMessage());
         }
         return map;
     }
@@ -146,6 +133,9 @@ public class XmlUtil {
             root.appendChild(filed);
         }
         TransformerFactory tf = TransformerFactory.newInstance();
+        tf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        tf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        tf.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
         Transformer transformer = tf.newTransformer();
         DOMSource source = new DOMSource(document);
         transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");

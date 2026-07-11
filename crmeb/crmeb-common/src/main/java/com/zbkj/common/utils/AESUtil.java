@@ -2,11 +2,9 @@ package com.zbkj.common.utils;
 
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import lombok.extern.slf4j.Slf4j;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.*;
@@ -23,9 +21,10 @@ import java.security.*;
  *  | Author: CRMEB Team <admin@crmeb.com>
  *  +----------------------------------------------------------------------
  */
+@Slf4j
 public class AESUtil {
 
-    public static boolean initialized = false;
+    private static volatile boolean initialized = false;
 
     /**
      * AES解密
@@ -42,29 +41,17 @@ public class AESUtil {
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS7Padding");
             Key sKeySpec = new SecretKeySpec(keyByte, "AES");
             cipher.init(Cipher.DECRYPT_MODE, sKeySpec, generateIV(ivByte));// 初始化
-            byte[] result = cipher.doFinal(content);
-            return result;
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        } catch (IllegalBlockSizeException e) {
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
-            e.printStackTrace();
-        } catch (NoSuchProviderException e) {
-            e.printStackTrace();
+            return cipher.doFinal(content);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.debug("AES解密失败", e);
+            return null;
         }
-        return null;
     }
 
-    public static void initialize() {
-        if (initialized)
+    public static synchronized void initialize() {
+        if (initialized) {
             return;
+        }
         Security.addProvider(new BouncyCastleProvider());
         initialized = true;
     }

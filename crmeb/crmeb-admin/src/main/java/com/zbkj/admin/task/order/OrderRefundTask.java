@@ -39,8 +39,7 @@ public class OrderRefundTask {
             orderTaskService.refundApply();
 
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("OrderRefundTask.task" + " | msg : " + e.getMessage());
+            logger.error("OrderRefundTask failed", e);
         }
     }
 }

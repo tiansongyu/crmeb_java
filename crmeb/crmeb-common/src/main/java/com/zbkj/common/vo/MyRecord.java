@@ -347,15 +347,16 @@ public class MyRecord implements Serializable {
      * Get column of any type that extends from Number
      */
     public Number getNumber(String column) {
-        if (getColumns().get(column) instanceof String) {
+        Object value = getColumns().get(column);
+        if (value instanceof String) {
             try {
-                return NumberFormat.getInstance().parse(getColumns().get(column).toString());
+                return NumberFormat.getInstance().parse(value.toString());
             } catch (ParseException e) {
-                System.out.println("类型转换错误e = " + e.getMessage());
-                e.printStackTrace();
+                logger.warn("字段无法转换为数字，column={}", column, e);
+                return null;
             }
         }
-        return (Number) getColumns().get(column);
+        return value instanceof Number ? (Number) value : null;
     }
 
     public String toString() {
@@ -441,11 +442,9 @@ public class MyRecord implements Serializable {
             String firstLetter = fieldName.substring(0, 1).toUpperCase();
             String getter = "get" + firstLetter + fieldName.substring(1);
             Method method = o.getClass().getMethod(getter, new Class[]{});
-            Object value = method.invoke(o, new Object[]{});
-            return value;
+            return method.invoke(o, new Object[]{});
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("获取属性值失败！" + e, e);
+            logger.error("获取属性值失败，class={}, field={}", o.getClass().getName(), fieldName, e);
         }
         return null;
     }

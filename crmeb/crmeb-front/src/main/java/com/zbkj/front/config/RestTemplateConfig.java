@@ -1,10 +1,14 @@
 package com.zbkj.front.config;
 
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequestFactory;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
@@ -12,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * RestTemplate配置组件
@@ -35,12 +40,28 @@ public class RestTemplateConfig {
         return restTemplate;
     }
 
+    @Bean(destroyMethod = "close")
+    public CloseableHttpClient httpClient() {
+        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+        connectionManager.setMaxTotal(200);
+        connectionManager.setDefaultMaxPerRoute(50);
+        connectionManager.setValidateAfterInactivity(5000);
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(15000)
+                .setSocketTimeout(10000)
+                .setConnectionRequestTimeout(5000)
+                .build();
+        return HttpClients.custom()
+                .setConnectionManager(connectionManager)
+                .setDefaultRequestConfig(requestConfig)
+                .evictExpiredConnections()
+                .evictIdleConnections(30, TimeUnit.SECONDS)
+                .build();
+    }
+
     @Bean
-    public ClientHttpRequestFactory httpRequestFactory() {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setReadTimeout(10000);//ms
-        factory.setConnectTimeout(15000);//ms
-        return factory;
+    public ClientHttpRequestFactory httpRequestFactory(CloseableHttpClient httpClient) {
+        return new HttpComponentsClientHttpRequestFactory(httpClient);
     }
 
     //解决微信返回json Content-Type 值却是 text/plain 的问题

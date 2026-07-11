@@ -9,6 +9,7 @@ import com.zbkj.common.constants.PayConstants;
 import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.vo.CreateOrderRequestVo;
 import com.zbkj.common.vo.WxRefundVo;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -16,6 +17,7 @@ import org.w3c.dom.NodeList;
 import javax.xml.parsers.DocumentBuilder;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -30,6 +32,7 @@ import java.util.*;
  *  | Author: CRMEB Team <admin@crmeb.com>
  *  +----------------------------------------------------------------------
  */
+@Slf4j
 public class WxPayUtil {
 
     /**
@@ -87,9 +90,7 @@ public class WxPayUtil {
                 sb.append(k).append("=").append(map.get(k)).append("&");
         }
         sb.append("key=").append(signKey);
-        String sign = SecureUtil.md5(sb.toString()).toUpperCase();
-        System.out.println("sign ========== " + sign);
-        return sign;
+        return SecureUtil.md5(sb.toString()).toUpperCase();
     }
 
     /**
@@ -114,9 +115,7 @@ public class WxPayUtil {
                 sb.append(k).append("=").append(map.get(k)).append("&");
         }
         sb.append("key=").append(signKey);
-        String sign = SecureUtil.md5(sb.toString()).toUpperCase();
-        System.out.println("sign ========== " + sign);
-        return sign;
+        return SecureUtil.md5(sb.toString()).toUpperCase();
     }
 
     /**
@@ -139,9 +138,7 @@ public class WxPayUtil {
                 sb.append(k).append("=").append(map.get(k).trim()).append("&");
         }
         sb.append("key=").append(signKey);
-        String sign = SecureUtil.md5(sb.toString()).toUpperCase();
-        System.out.println("sign ========== " + sign);
-        return sign;
+        return SecureUtil.md5(sb.toString()).toUpperCase();
     }
 
     /**
@@ -164,9 +161,7 @@ public class WxPayUtil {
                 sb.append(k).append("=").append(map.get(k)).append("&");
         }
         sb.append("key=").append(signKey);
-        String sign = SecureUtil.md5(sb.toString()).toUpperCase();
-        System.out.println("sign ========== " + sign);
-        return sign;
+        return SecureUtil.md5(sb.toString()).toUpperCase();
     }
 
     /**
@@ -196,25 +191,21 @@ public class WxPayUtil {
         try {
             Map<String, String> data = new HashMap<String, String>();
             DocumentBuilder documentBuilder = WXPayXmlUtil.newDocumentBuilder();
-            InputStream stream = new ByteArrayInputStream(strXML.getBytes("UTF-8"));
-            org.w3c.dom.Document doc = documentBuilder.parse(stream);
-            doc.getDocumentElement().normalize();
-            NodeList nodeList = doc.getDocumentElement().getChildNodes();
-            for (int idx = 0; idx < nodeList.getLength(); ++idx) {
-                Node node = nodeList.item(idx);
-                if (node.getNodeType() == Node.ELEMENT_NODE) {
-                    org.w3c.dom.Element element = (org.w3c.dom.Element) node;
-                    data.put(element.getNodeName(), element.getTextContent());
+            try (InputStream stream = new ByteArrayInputStream(strXML.getBytes(StandardCharsets.UTF_8))) {
+                org.w3c.dom.Document doc = documentBuilder.parse(stream);
+                doc.getDocumentElement().normalize();
+                NodeList nodeList = doc.getDocumentElement().getChildNodes();
+                for (int idx = 0; idx < nodeList.getLength(); ++idx) {
+                    Node node = nodeList.item(idx);
+                    if (node.getNodeType() == Node.ELEMENT_NODE) {
+                        org.w3c.dom.Element element = (org.w3c.dom.Element) node;
+                        data.put(element.getNodeName(), element.getTextContent());
+                    }
                 }
-            }
-            try {
-                stream.close();
-            } catch (Exception ex) {
-                // do nothing
             }
             return data;
         } catch (Exception ex) {
-            System.out.println(StrUtil.format("Invalid XML, can not convert to map. Error message: {}. XML content: {}", ex.getMessage(), strXML));
+            log.warn("Invalid payment XML: {}", ex.getMessage());
             throw ex;
         }
 

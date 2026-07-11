@@ -246,52 +246,76 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
     @Override
     public SystemWriteOffOrderResponse getWriteOffList(SystemWriteOffOrderSearchRequest request, PageParamRequest pageParamRequest) {
         LambdaQueryWrapper<StoreOrder> lambdaQueryWrapper = new LambdaQueryWrapper<>();
-        String where = " is_del = 0 and shipping_type = 2";
-        //时间
+        lambdaQueryWrapper.eq(StoreOrder::getIsDel, false);
+        lambdaQueryWrapper.eq(StoreOrder::getShippingType, 2);
+
+        String startTime = null;
+        String endTime = null;
         if (!StringUtils.isBlank(request.getDateLimit())) {
             DateLimitUtilVo dateLimit = CrmebDateUtil.getDateLimit(request.getDateLimit());
-            where += " and (create_time between '" + dateLimit.getStartTime() + "' and '" + dateLimit.getEndTime() + "' )";
+            startTime = dateLimit.getStartTime();
+            endTime = dateLimit.getEndTime();
+            if (StringUtils.isNotBlank(startTime) && StringUtils.isNotBlank(endTime)) {
+                lambdaQueryWrapper.between(StoreOrder::getCreateTime, startTime, endTime);
+            } else {
+                startTime = null;
+                endTime = null;
+            }
         }
 
-        if (!StringUtils.isBlank(request.getKeywords())) {
-            where += " and (real_name like '%"+ request.getKeywords() +"%' or user_phone = '"+ request.getKeywords() +"' or order_id = '" + request.getKeywords() + "' or id = '" + request.getKeywords() + "' )";
+        String keywords = request.getKeywords();
+        Integer keywordId = parseOrderIdKeyword(keywords);
+        if (StringUtils.isNotBlank(keywords)) {
+            lambdaQueryWrapper.and(query -> {
+                query.like(StoreOrder::getRealName, keywords)
+                        .or().eq(StoreOrder::getUserPhone, keywords)
+                        .or().eq(StoreOrder::getOrderId, keywords);
+                if (keywordId != null) {
+                    query.or().eq(StoreOrder::getId, keywordId);
+                }
+            });
         }
 
         if (request.getStoreId() != null && request.getStoreId() > 0) {
-            where += " and store_id = " + request.getStoreId();
+            lambdaQueryWrapper.eq(StoreOrder::getStoreId, request.getStoreId());
         }
 
-        SystemWriteOffOrderResponse systemWriteOffOrderResponse = new SystemWriteOffOrderResponse();
-        BigDecimal totalPrice = dao.getTotalPrice(where);
-        if (ObjectUtil.isNull(totalPrice)) {
-            totalPrice = BigDecimal.ZERO;
+        SystemWriteOffOrderResponse systemWriteOffOrderResponse = dao.getWriteOffSummary(
+                startTime, endTime, keywords, keywordId, request.getStoreId());
+        if (systemWriteOffOrderResponse == null) {
+            systemWriteOffOrderResponse = new SystemWriteOffOrderResponse()
+                    .setOrderTotalPrice(BigDecimal.ZERO)
+                    .setRefundTotalPrice(BigDecimal.ZERO)
+                    .setRefundTotal(0);
         }
-        systemWriteOffOrderResponse.setOrderTotalPrice(totalPrice);   //订单总金额
-
-        BigDecimal refundPrice = dao.getRefundPrice(where);
-        if (ObjectUtil.isNull(refundPrice)) {
-            refundPrice = BigDecimal.ZERO;
-        }
-        systemWriteOffOrderResponse.setRefundTotalPrice(refundPrice); //退款总金额
-        systemWriteOffOrderResponse.setRefundTotal(dao.getRefundTotal(where));  //退款总单数
 
         Page<StoreOrder> storeOrderPage = PageHelper.startPage(pageParamRequest.getPage(), pageParamRequest.getLimit());
-
-        lambdaQueryWrapper.apply(where);
         lambdaQueryWrapper.orderByDesc(StoreOrder::getId);
         List<StoreOrder> storeOrderList = dao.selectList(lambdaQueryWrapper);
+        systemWriteOffOrderResponse.setTotal(storeOrderPage.getTotal());
 
-        if (storeOrderList.size() < 1) {
-            systemWriteOffOrderResponse.setList(CommonPage.restPage(new PageInfo<>()));
+        if (CollUtil.isEmpty(storeOrderList)) {
+            systemWriteOffOrderResponse.setList(CommonPage.restPage(
+                    CommonPage.copyPageInfo(storeOrderPage, Collections.emptyList())));
             return systemWriteOffOrderResponse;
         }
 
         List<StoreOrderItemResponse> storeOrderItemResponseArrayList = formatOrder(storeOrderList);
 
-        systemWriteOffOrderResponse.setTotal(storeOrderPage.getTotal()); //总单数
         systemWriteOffOrderResponse.setList(CommonPage.restPage(CommonPage.copyPageInfo(storeOrderPage, storeOrderItemResponseArrayList)));
 
         return systemWriteOffOrderResponse;
+    }
+
+    private Integer parseOrderIdKeyword(String keywords) {
+        if (StringUtils.isBlank(keywords)) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(keywords.trim());
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 
     /**
@@ -565,7 +589,7 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
             try {
                 storeOrderRefundService.refund(request, storeOrder);
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("微信退款申请失败，orderId={}", storeOrder.getOrderId(), e);
                 throw new CrmebException("微信申请退款失败！");
             }
         }
@@ -982,7 +1006,10 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
     @Override
     public Map<String, StoreOrder> getMapInOrderNo(List<String> orderNoList) {
         Map<String, StoreOrder> map = CollUtil.newHashMap();
-        LambdaUpdateWrapper<StoreOrder> lqw = new LambdaUpdateWrapper<>();
+        if (CollUtil.isEmpty(orderNoList)) {
+            return map;
+        }
+        LambdaQueryWrapper<StoreOrder> lqw = new LambdaQueryWrapper<>();
         lqw.in(StoreOrder::getOrderId, orderNoList);
         List<StoreOrder> orderList = dao.selectList(lqw);
         orderList.forEach(order -> {
@@ -998,11 +1025,12 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
      */
     @Override
     public BigDecimal getSpreadOrderTotalPriceByOrderList(List<String> orderNoList) {
-        LambdaQueryWrapper<StoreOrder> lqw = new LambdaQueryWrapper<>();
-        lqw.select(StoreOrder::getPayPrice);
-        lqw.in(StoreOrder::getOrderId, orderNoList);
-        List<StoreOrder> orderList = dao.selectList(lqw);
-        return orderList.stream().map(StoreOrder::getPayPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (CollUtil.isEmpty(orderNoList)) {
+            return BigDecimal.ZERO;
+        }
+        QueryWrapper<StoreOrder> wrapper = new QueryWrapper<>();
+        wrapper.in("order_id", orderNoList);
+        return selectPayPriceSum(wrapper);
     }
 
     /**
@@ -1111,14 +1139,12 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
      */
     @Override
     public BigDecimal getSumPayPriceByUid(Integer userId) {
-        LambdaQueryWrapper<StoreOrder> lqw = Wrappers.lambdaQuery();
-        lqw.select(StoreOrder::getPayPrice);
-        lqw.eq(StoreOrder::getPaid, true);
-        lqw.eq(StoreOrder::getIsDel, false);
-        lqw.eq(StoreOrder::getUid, userId);
-        lqw.lt(StoreOrder::getRefundStatus, 2);
-        List<StoreOrder> orderList = dao.selectList(lqw);
-        return orderList.stream().map(StoreOrder::getPayPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+        QueryWrapper<StoreOrder> wrapper = new QueryWrapper<>();
+        wrapper.eq("paid", true);
+        wrapper.eq("is_del", false);
+        wrapper.eq("uid", userId);
+        wrapper.lt("refund_status", 2);
+        return selectPayPriceSum(wrapper);
     }
 
     /**
@@ -1147,18 +1173,23 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
      */
     @Override
     public BigDecimal getSumPayPriceByUidAndDate(Integer userId, String date) {
-        LambdaQueryWrapper<StoreOrder> lqw = Wrappers.lambdaQuery();
-        lqw.select(StoreOrder::getPayPrice);
-        lqw.eq(StoreOrder::getPaid, true);
-        lqw.eq(StoreOrder::getIsDel, false);
-        lqw.eq(StoreOrder::getUid, userId);
-        lqw.lt(StoreOrder::getRefundStatus, 2);
+        QueryWrapper<StoreOrder> wrapper = new QueryWrapper<>();
+        wrapper.eq("paid", true);
+        wrapper.eq("is_del", false);
+        wrapper.eq("uid", userId);
+        wrapper.lt("refund_status", 2);
         if (StrUtil.isNotBlank(date)) {
             DateLimitUtilVo dateLimit = CrmebDateUtil.getDateLimit(date);
-            lqw.between(StoreOrder::getCreateTime, dateLimit.getStartTime(), dateLimit.getEndTime());
+            wrapper.between("create_time", dateLimit.getStartTime(), dateLimit.getEndTime());
         }
-        List<StoreOrder> orderList = dao.selectList(lqw);
-        return orderList.stream().map(StoreOrder::getPayPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return selectPayPriceSum(wrapper);
+    }
+
+    private BigDecimal selectPayPriceSum(QueryWrapper<StoreOrder> wrapper) {
+        wrapper.select("COALESCE(SUM(pay_price), 0) AS pay_price");
+        StoreOrder aggregate = dao.selectOne(wrapper);
+        return aggregate == null || aggregate.getPayPrice() == null
+                ? BigDecimal.ZERO : aggregate.getPayPrice();
     }
 
     /**
@@ -1456,17 +1487,15 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
      */
     @Override
     public Integer getOrderPayUserNumByUidList(List<Integer> uidList) {
-        QueryWrapper<StoreOrder> wrapper = new QueryWrapper<>();
-        //wrapper.select("id");
-        wrapper.select(" ANY_VALUE(id) AS id ");
-        wrapper.eq("paid", 1);
-        wrapper.in("uid", uidList);
-        wrapper.groupBy("uid");
-        List<StoreOrder> orderList = dao.selectList(wrapper);
-        if (CollUtil.isEmpty(orderList)) {
+        if (CollUtil.isEmpty(uidList)) {
             return 0;
         }
-        return orderList.size();
+        QueryWrapper<StoreOrder> wrapper = new QueryWrapper<>();
+        wrapper.select("COUNT(DISTINCT uid) AS id");
+        wrapper.eq("paid", 1);
+        wrapper.in("uid", uidList);
+        StoreOrder aggregate = dao.selectOne(wrapper);
+        return aggregate == null || aggregate.getId() == null ? 0 : aggregate.getId();
     }
 
     /**
@@ -1476,16 +1505,13 @@ public class StoreOrderServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder
      */
     @Override
     public BigDecimal getPayOrderAmountByUidList(List<Integer> uidList) {
-        QueryWrapper<StoreOrder> wrapper = new QueryWrapper<>();
-        wrapper.select("IFNULL(sum(pay_price), 0.00) as pay_price");
-//        wrapper.select("ifnull(if(sum(pay_price) = 0.00, 0, sum(pay_price)), 0) as pay_price");
-        wrapper.eq("paid", 1);
-        wrapper.in("uid", uidList);
-        List<StoreOrder> orderList = dao.selectList(wrapper);
-        if (CollUtil.isEmpty(orderList)) {
+        if (CollUtil.isEmpty(uidList)) {
             return BigDecimal.ZERO;
         }
-        return orderList.stream().map(StoreOrder::getPayPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+        QueryWrapper<StoreOrder> wrapper = new QueryWrapper<>();
+        wrapper.eq("paid", 1);
+        wrapper.in("uid", uidList);
+        return selectPayPriceSum(wrapper);
     }
 
     /**

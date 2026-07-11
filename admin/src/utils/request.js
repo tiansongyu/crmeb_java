@@ -9,9 +9,8 @@
 // +----------------------------------------------------------------------
 
 import axios from 'axios';
-import { MessageBox, Message } from 'element-ui';
+import { Message } from 'element-ui';
 import store from '@/store';
-import { getToken } from '@/utils/auth';
 import SettingMer from '@/utils/settingMer';
 import { isPhone } from '@/libs/wechat';
 import { normalizeCrmebMediaTree } from '@/utils/mediaUrl';
@@ -42,7 +41,7 @@ service.interceptors.request.use(
 // response interceptor
 service.interceptors.response.use(
   (response) => {
-    const res = response.data;
+    const res = response.data || {};
     if (res && res.data) normalizeCrmebMediaTree(res.data);
     // if the custom code is not 20000, it is judged as an error.
     if (res.code === 401) {
@@ -62,14 +61,15 @@ service.interceptors.response.use(
         type: 'error',
         duration: 5 * 1000,
       });
-      return Promise.reject();
+      return Promise.reject(res);
     } else {
       return res.data;
     }
   },
   (error) => {
+    const responseMessage = error.response && error.response.data && error.response.data.message;
     Message({
-      message: error.message,
+      message: responseMessage || error.message || '网络请求失败',
       type: 'error',
       duration: 5 * 1000,
     });

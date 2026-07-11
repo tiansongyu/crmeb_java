@@ -1,13 +1,14 @@
-FROM node:14-bullseye AS build
+FROM node:16-bullseye AS build
 
 WORKDIR /workspace/app
 ARG VUE_APP_IMAGE_DOMAIN=
 ENV VUE_APP_IMAGE_DOMAIN=${VUE_APP_IMAGE_DOMAIN}
 COPY package*.json ./
 RUN npm install -g npm@8.19.4 \
-    && npm install --legacy-peer-deps
+    && if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
 COPY . .
-RUN npm run patch:uni \
+RUN npm test \
+    && npm run patch:uni \
     && npm run build:h5
 
 FROM nginx:1.25-alpine

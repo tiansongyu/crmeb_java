@@ -210,7 +210,6 @@ public class ExpressServiceImpl extends ServiceImpl<ExpressDao, Express> impleme
         param.add("limit", 9999);
 
         JSONObject post = onePassUtil.getFrom(OnePassConstants.ONE_PASS_API_URL + OnePassConstants.ONE_PASS_API_EXPRESS_URI, param, header);
-        System.out.println("OnePass Express ALL post = " + post);
         JSONObject jsonObject = post.getJSONObject("data");
         JSONArray jsonArray = jsonObject.getJSONArray("data");
         if (CollUtil.isEmpty(jsonArray)) return;
@@ -264,4 +263,3 @@ public class ExpressServiceImpl extends ServiceImpl<ExpressDao, Express> impleme
         return expressList.stream().map(Express::getCode).collect(Collectors.toList());
     }
 }
-

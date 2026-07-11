@@ -1,7 +1,4 @@
 package com.zbkj.admin.task.brokerage;
-
-
-import com.zbkj.admin.task.order.OrderReceiptTask;
 import com.zbkj.common.utils.CrmebDateUtil;
 import com.zbkj.service.service.UserBrokerageRecordService;
 import org.slf4j.Logger;
@@ -25,7 +22,7 @@ import org.springframework.stereotype.Component;
 public class BrokerageFrozenTask {
 
     //日志
-    private static final Logger logger = LoggerFactory.getLogger(OrderReceiptTask.class);
+    private static final Logger logger = LoggerFactory.getLogger(BrokerageFrozenTask.class);
 
     @Autowired
     private UserBrokerageRecordService userBrokerageRecordService;
@@ -40,8 +37,7 @@ public class BrokerageFrozenTask {
             userBrokerageRecordService.brokerageThaw();
 
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("BrokerageFrozenTask.task" + " | msg : " + e.getMessage());
+            logger.error("BrokerageFrozenTask failed", e);
         }
     }
 }

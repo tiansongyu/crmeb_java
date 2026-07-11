@@ -17,7 +17,17 @@
         <if test="keywords != '' and keywords != null ">
             and ( u.real_name like CONCAT('%',#{keywords},'%') or u.nickname like CONCAT('%',#{keywords},'%'))
         </if>
-        ORDER BY ${sortKey} ${sortValue}
+        ORDER BY
+        <choose>
+            <when test='sortKey == "childCount"'>childCount</when>
+            <when test='sortKey == "numberCount"'>numberCount</when>
+            <when test='sortKey == "orderCount"'>orderCount</when>
+            <otherwise>u.create_time</otherwise>
+        </choose>
+        <choose>
+            <when test='sortValue == "ASC"'>ASC</when>
+            <otherwise>DESC</otherwise>
+        </choose>
     </select>
 
     <select id="findAdminList" resultType="com.zbkj.common.model.user.User" parameterType="Map">
@@ -38,8 +48,12 @@
                 #{group_id}
             </foreach>
         </if>
-         <if test="tagIdSql != null and tagIdSql !='' ">
-            and ${tagIdSql}
+         <if test="tagIdList != null and tagIdList.size() > 0 ">
+            and (
+            <foreach item="tagId" collection="tagIdList" separator=" or ">
+                find_in_set(#{tagId}, u.tag_id)
+            </foreach>
+            )
         </if>
         <if test="levelList != null and levelList.size() > 0 ">
             and u.level in
@@ -61,11 +75,11 @@
                 and u.pay_count = 0
             </if>
             <if test="payCount > 0">
-                and u.pay_count >= ${payCount}
+                and u.pay_count >= #{payCount}
             </if>
         </if>
         <if test="status != null and status !='' or status == 0 ">
-            and u.`status` = ${status}
+            and u.`status` = #{status}
         </if>
         <if test="startTime != null and startTime != '' and accessType != null and accessType != ''">
             <choose>

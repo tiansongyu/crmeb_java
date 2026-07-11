@@ -31,10 +31,6 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler, Serializa
         httpServletResponse.setStatus(200);
         httpServletResponse.setContentType("application/json");
         httpServletResponse.setCharacterEncoding("utf-8");
-        try {
-            httpServletResponse.getWriter().print(JSONObject.toJSONString(CommonResult.failed(CommonResultCode.FORBIDDEN)));
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        }
+        httpServletResponse.getWriter().print(JSONObject.toJSONString(CommonResult.failed(CommonResultCode.FORBIDDEN)));
     }
 }

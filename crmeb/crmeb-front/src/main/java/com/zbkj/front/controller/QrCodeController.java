@@ -1,8 +1,6 @@
 package com.zbkj.front.controller;
 
 import com.alibaba.fastjson.JSONObject;
-import com.zbkj.common.constants.Constants;
-import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.result.CommonResult;
 import com.zbkj.service.service.QrCodeService;
 import io.swagger.annotations.Api;
@@ -65,12 +63,8 @@ public class QrCodeController {
             @RequestParam String text,
             @RequestParam int width,
             @RequestParam int height) {
-        if((width < 50 || height < 50) && (width > 500 || height > 500) && text.length() >= 999){
-            throw new CrmebException(Constants.RESULT_QRCODE_PRAMERROR);
-        }
         return CommonResult.success(qrCodeService.base64String(text, width,height));
     }
 }
-
 
 

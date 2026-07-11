@@ -447,8 +447,8 @@ public class WeChatPayServiceImpl implements WeChatPayService {
             responseVo.setExtra(vo.getScene_info());
             return responseVo;
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new CrmebException(e.getMessage());
+            logger.error("生成微信支付订单失败", e);
+            throw new CrmebException("生成微信支付订单失败");
         }
     }
 

@@ -7,7 +7,6 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.pagehelper.PageInfo;
@@ -468,8 +467,7 @@ public class UserCenterServiceImpl extends ServiceImpl<UserDao, User> implements
                 String token = tokenComponent.createToken(user);
                 loginResponse.setToken(token);
             } catch (Exception e) {
-                logger.error(StrUtil.format("公众号登录生成token失败，uid={}", user.getUid()));
-                e.printStackTrace();
+                logger.error(StrUtil.format("公众号登录生成token失败，uid={}", user.getUid()), e);
             }
             loginResponse.setType("login");
             loginResponse.setUid(user.getUid());
@@ -513,7 +511,6 @@ public class UserCenterServiceImpl extends ServiceImpl<UserDao, User> implements
     @Override
     public LoginResponse weChatAuthorizeProgramLogin(String code, RegisterThirdUserRequest request) {
         WeChatMiniAuthorizeVo response = wechatNewService.miniAuthCode(code);
-        System.out.println("小程序登陆成功 = " + JSON.toJSONString(response));
 
         //检测是否存在
         UserToken userToken = userTokenService.getByOpenidAndType(response.getOpenId(), Constants.THIRD_LOGIN_TOKEN_TYPE_PROGRAM);
@@ -545,8 +542,7 @@ public class UserCenterServiceImpl extends ServiceImpl<UserDao, User> implements
                 String token = tokenComponent.createToken(user);
                 loginResponse.setToken(token);
             } catch (Exception e) {
-                logger.error(StrUtil.format("小程序登录生成token失败，uid={}", user.getUid()));
-                e.printStackTrace();
+                logger.error(StrUtil.format("小程序登录生成token失败，uid={}", user.getUid()), e);
             }
             loginResponse.setType("login");
             loginResponse.setUid(user.getUid());
@@ -882,8 +878,7 @@ public class UserCenterServiceImpl extends ServiceImpl<UserDao, User> implements
             String token = tokenComponent.createToken(finalUser);
             loginResponse.setToken(token);
         } catch (Exception e) {
-            logger.error(StrUtil.format("绑定手机号，自动登录生成token失败，uid={}", finalUser.getUid()));
-            e.printStackTrace();
+            logger.error(StrUtil.format("绑定手机号，自动登录生成token失败，uid={}", finalUser.getUid()), e);
         }
         loginResponse.setType("login");
         loginResponse.setUid(user.getUid());
@@ -941,8 +936,7 @@ public class UserCenterServiceImpl extends ServiceImpl<UserDao, User> implements
                 String token = tokenComponent.createToken(user);
                 loginResponse.setToken(token);
             } catch (Exception e) {
-                logger.error(StrUtil.format("APP微信登录生成token失败，uid={}", user.getUid()));
-                e.printStackTrace();
+                logger.error(StrUtil.format("APP微信登录生成token失败，uid={}", user.getUid()), e);
             }
             loginResponse.setType("login");
             loginResponse.setUid(user.getUid());
@@ -1111,7 +1105,6 @@ public class UserCenterServiceImpl extends ServiceImpl<UserDao, User> implements
                 }
 
                 WeChatMiniAuthorizeVo response = wechatNewService.miniAuthCode(request.getCode());
-                System.out.println("小程序登陆成功 = " + JSON.toJSONString(response));
                 String decrypt = WxUtil.decrypt(programAppId, request.getEncryptedData(), response.getSessionKey(), request.getIv());
                 if (StrUtil.isBlank(decrypt)) {
                     throw new CrmebException("微信小程序获取手机号解密失败");

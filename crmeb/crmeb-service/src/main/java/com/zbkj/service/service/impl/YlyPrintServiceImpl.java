@@ -2,7 +2,6 @@ package com.zbkj.service.service.impl;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
-import com.alibaba.fastjson.JSONObject;
 import com.zbkj.common.constants.Constants;
 import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.model.order.StoreOrder;
@@ -97,10 +96,9 @@ public class YlyPrintServiceImpl implements YlyPrintService {
 
         try {
             ylyUtil.ylyPrint(ylyPrintRequest);
-            logger.info("易联云打印小票成功" + JSONObject.toJSONString(ylyPrintRequest));
+            logger.info("易联云打印小票成功，orderNo={}", exitOrder.getOrderId());
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("易联云打印小票失败 " + e.getMessage());
+            logger.error("易联云打印小票失败，orderNo={}", exitOrder.getOrderId(), e);
         }
     }
 

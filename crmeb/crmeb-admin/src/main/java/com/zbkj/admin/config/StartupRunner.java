@@ -6,6 +6,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.zbkj.common.config.CrmebConfig;
 import com.zbkj.common.constants.SysConfigConstants;
 import com.zbkj.service.service.SystemConfigService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -16,6 +17,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @Component
+@Slf4j
 public class StartupRunner implements CommandLineRunner {
 
     @Autowired
@@ -31,14 +33,14 @@ public class StartupRunner implements CommandLineRunner {
 
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         // 项目启动后立即执行的代码
-        System.out.println("项目启动完成，开始执行初始化任务...");
+        log.info("项目启动完成，开始执行初始化任务");
         if (Boolean.TRUE.equals(startupReportEnabled)) {
             // 异步执行，不阻塞启动
             CompletableFuture.runAsync(this::installStatistics);
         }
-        System.out.println("初始化任务执行结束...");
+        log.info("初始化任务执行结束");
     }
 
     public void installStatistics() {
@@ -58,11 +60,11 @@ public class StartupRunner implements CommandLineRunner {
             map.put("host", apiUrl);
             map.put("version", version);
             map.put("https", "https");
-            String result = HttpUtil.post(startupReportUrl, JSONObject.toJSONString(map));
+            HttpUtil.post(startupReportUrl, JSONObject.toJSONString(map));
 
         } catch (Exception e) {
             // 异步调用不应影响主流程
-            e.printStackTrace();
+            log.warn("启动统计上报失败", e);
         }
     }
 }

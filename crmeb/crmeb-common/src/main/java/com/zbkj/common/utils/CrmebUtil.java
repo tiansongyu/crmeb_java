@@ -11,8 +11,8 @@ import com.zbkj.common.constants.Constants;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.util.*;
@@ -105,33 +105,6 @@ public class CrmebUtil {
     public static <T> T mapStringToObj(HashMap<String,String> map, Class<T> clz){
         if (map == null) return null;
         return JSONObject.parseObject(JSONObject.toJSONString(map), clz);
-    }
-
-
-    /**
-     * 密码工具
-     * @param args String[] 字符串数组
-     */
-    public static void main(String[] args) throws Exception {
-//        System.out.println(encryptPassword("123456", "admin"));
-//		System.out.println(decryptPassowrd("", ""));
-
-//        String key = "123456";
-//        String data = "中国123ABCabc";
-//        System.out.println("原始数据：" + data);
-//        String encryptPassword = encryptPassword(data, key);
-//        System.out.println("加密结果：" + encryptPassword);
-//        String decryptPassowrd = decryptPassowrd(encryptPassword, key);
-//        System.out.println("解密结果：" + decryptPassowrd);
-        // 执行结果如下：
-        // 原始数据：中国123ABCabc
-        // 加密结果：5JNGj04iE/XUuTZM75zMrA==
-        // 解密结果：中国123ABCabc
-
-//        System.out.println(encryptPassword("Crmeb_123456", "18292417675"));
-        System.out.println(decryptPassowrd("c7Nwx1WsDdewbab2TlkpUg==", "18292417675"));
-        // 执行结果：f6mcpGQ8NEmwbab2TlkpUg==
-        // 与 SQL 中的数据一致
     }
 
     /**
@@ -564,17 +537,17 @@ public class CrmebUtil {
     public static int getRate(BigDecimal b1, BigDecimal b2){
         //计算差值
 
-        if(b2.equals(b1)){
+        if (b2.compareTo(b1) == 0) {
             //数值一样，说明没有增长
             return Constants.NUM_ZERO;
         }
 
-        if(b2.equals(BigDecimal.ZERO)){
+        if (b2.compareTo(BigDecimal.ZERO) == 0) {
             //b2是0
             return Constants.NUM_ONE_HUNDRED;
         }
 
-        return (b1.subtract(b2)).divide(b2, 2, BigDecimal.ROUND_UP).multiply(BigDecimal.TEN).multiply(BigDecimal.TEN).intValue();
+        return b1.subtract(b2).divide(b2, 2, RoundingMode.UP).movePointRight(2).intValue();
 
 
 //        BigDecimal.setScale();//用于格式化小数点
@@ -618,10 +591,10 @@ public class CrmebUtil {
 
         if(b2.compareTo(BigDecimal.ZERO) == 0){
             //b2是0
-            return b1.setScale(2, BigDecimal.ROUND_UP);
+            return b1.setScale(2, RoundingMode.UP);
         }
 
-        return (b1.subtract(b2)).multiply(BigDecimal.TEN).multiply(BigDecimal.TEN).divide(b2, BigDecimal.ROUND_UP);
+        return b1.subtract(b2).movePointRight(2).divide(b2, RoundingMode.UP);
     }
 
     /**
@@ -755,35 +728,26 @@ public class CrmebUtil {
      * @return 返回转化之后的unicode编码
      */
     public static String CNToUnicode(String CN) {
-
-        try {
-            StringBuffer out = new StringBuffer("");
-            //直接获取字符串的unicode二进制
-            byte[] bytes = CN.getBytes("unicode");
-            //然后将其byte转换成对应的16进制表示即可
-            for (int i = 0; i < bytes.length - 1; i += 2) {
-                out.append("\\u");
-                String str = Integer.toHexString(bytes[i + 1] & 0xff);
-                for (int j = str.length(); j < 2; j++) {
-                    out.append("0");
-                }
-                String str1 = Integer.toHexString(bytes[i] & 0xff);
-                out.append(str1);
-                out.append(str);
+        StringBuilder out = new StringBuilder();
+        // 直接获取字符串的 UTF-16 二进制
+        byte[] bytes = CN.getBytes(StandardCharsets.UTF_16);
+        // 然后将其 byte 转换成对应的 16 进制表示
+        for (int i = 0; i < bytes.length - 1; i += 2) {
+            out.append("\\u");
+            String str = Integer.toHexString(bytes[i + 1] & 0xff);
+            for (int j = str.length(); j < 2; j++) {
+                out.append("0");
             }
-            return out.toString();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-            return null;
+            String str1 = Integer.toHexString(bytes[i] & 0xff);
+            out.append(str1);
+            out.append(str);
         }
+        return out.toString();
     }
 
     public static String getSign(Map<String, Object> map, String signKey){
         String result = CrmebUtil.mapToStringUrl(map) + "&key=" + signKey;
-//        return DigestUtils.md5Hex(result).toUpperCase();
-        String sign = SecureUtil.md5(result).toUpperCase();
-        System.out.println("sign ========== " + sign);
-        return sign;
+        return SecureUtil.md5(result).toUpperCase();
     }
 
     /**
@@ -817,13 +781,14 @@ public class CrmebUtil {
      * @return  百分比
      */
     public static String percentInstance(Integer detailTotalNumber, Integer totalNumber) {
-        Double bfTotalNumber = Double.valueOf(detailTotalNumber);
-        Double zcTotalNumber = Double.valueOf(totalNumber);
-        double percent = bfTotalNumber/zcTotalNumber;
         //获取格式化对象
         NumberFormat nt = NumberFormat.getPercentInstance();
         //设置百分数精确度2即保留两位小数
         nt.setMinimumFractionDigits(2);
+        if (detailTotalNumber == null || totalNumber == null || totalNumber == 0) {
+            return nt.format(0);
+        }
+        double percent = detailTotalNumber.doubleValue() / totalNumber.doubleValue();
         return nt.format(percent);
     }
 
@@ -834,10 +799,10 @@ public class CrmebUtil {
      * @return  百分比
      */
     public static int percentInstanceIntVal(Integer detailTotalNumber, Integer totalNumber) {
-        BigDecimal sales = new BigDecimal(detailTotalNumber);
-        BigDecimal total = new BigDecimal(totalNumber);
-        int percentage = sales.divide(total, 2, BigDecimal.ROUND_UP).multiply(new BigDecimal(100)).intValue();
-        return Math.min(percentage, 100);
+        if (detailTotalNumber == null || totalNumber == null) {
+            return 0;
+        }
+        return percentInstanceIntVal(BigDecimal.valueOf(detailTotalNumber), BigDecimal.valueOf(totalNumber));
     }
 
     /**
@@ -847,8 +812,11 @@ public class CrmebUtil {
      * @return  百分比
      */
     public static int percentInstanceIntVal(BigDecimal detailTotalNumber, BigDecimal totalNumber) {
-        int percentage = detailTotalNumber.divide(totalNumber, 2, BigDecimal.ROUND_UP).multiply(new BigDecimal(100)).intValue();
-        return Math.min(percentage, 100);
+        if (detailTotalNumber == null || totalNumber == null || totalNumber.signum() == 0) {
+            return 0;
+        }
+        int percentage = detailTotalNumber.divide(totalNumber, 2, RoundingMode.UP).movePointRight(2).intValue();
+        return Math.max(0, Math.min(percentage, 100));
     }
 
     /**

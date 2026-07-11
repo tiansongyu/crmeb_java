@@ -56,7 +56,8 @@ public class CosServiceImpl implements CosService {
                 try{
                     cosClient.createBucket(createBucketRequest);
                 } catch (CosClientException serverException) {
-                    serverException.printStackTrace();
+                    logger.error("创建COS存储桶失败，bucket={}", cloudVo.getBucketName(), serverException);
+                    throw serverException;
                 }
             }
 
@@ -86,7 +87,8 @@ public class CosServiceImpl implements CosService {
                 try{
                     cosClient.createBucket(createBucketRequest);
                 } catch (CosClientException serverException) {
-                    serverException.printStackTrace();
+                    logger.error("创建COS存储桶失败，bucket={}", cloudVo.getBucketName(), serverException);
+                    throw serverException;
                 }
             }
 
@@ -99,4 +101,3 @@ public class CosServiceImpl implements CosService {
         }
     }
 }
-

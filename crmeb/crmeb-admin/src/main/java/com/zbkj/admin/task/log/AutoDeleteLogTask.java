@@ -36,13 +36,12 @@ public class AutoDeleteLogTask {
      */
     public void autoDeleteLog() {
         // cron : 0 0 0 */1 * ?
-        logger.info("---BargainStopChangeTask------bargain stop status change task: Execution Time - {}", CrmebDateUtil.nowDateTime());
+        logger.info("---AutoDeleteLogTask------delete expired logs: Execution Time - {}", CrmebDateUtil.nowDateTime());
         try {
             scheduleJobLogService.autoDeleteLog();
             wechatExceptionsService.autoDeleteLog();
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("BargainStopChangeTask" + " | msg : " + e.getMessage());
+            logger.error("AutoDeleteLogTask failed", e);
         }
     }
 
